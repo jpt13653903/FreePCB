@@ -34,18 +34,22 @@ void DlgSetSegmentClearance::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_APPLY_CON, m_radio2_apply_con);
 	DDX_Control(pDX, IDC_APPLY_NET, m_radio2_apply_net);
 
-	if (pDX->m_bSaveAndValidate)
+	DDX_Control(pDX, IDC_APPLY_PINVIA_NO,     m_radio3_no);
+	DDX_Control(pDX, IDC_APPLY_PINVIA_AUTO,   m_radio3_auto);
+	DDX_Control(pDX, IDC_APPLY_PINVIA_AS_SEL, m_radio3_as_sel);
+
+	if( pDX->m_bSaveAndValidate )
 	{
 		int val;
 		if( m_radio1_use_net_default.GetCheck() )
 		{
-			val = CClearanceInfo::E_USE_PARENT;
+			m_clearance.m_ca_clearance.m_status = CClearanceInfo::E_USE_PARENT;
 		}
 		else
 		{
 			CString str;
 			m_edit_clearance.GetWindowText(str);
-			if ( (sscanf(str, "%d", &val) != 1) || (val < 0) || (val > MAX_CLEARANCE_MIL) )
+			if( (sscanf(str, "%d", &val) != 1) || (val < 0) || (val > MAX_CLEARANCE_MIL) )
 			{
 				str.Format("Invalid clearance value (0-%d)", MAX_CLEARANCE_MIL);
 				AfxMessageBox( str );
@@ -54,10 +58,8 @@ void DlgSetSegmentClearance::DoDataExchange(CDataExchange* pDX)
 			}
 
 			val *= NM_PER_MIL;
+			m_clearance.m_ca_clearance = val;
 		}
-
-		// on exit
-		m_clearance.m_ca_clearance = val;
 
 		if( m_check_def_net.GetCheck() )
 		{
@@ -71,7 +73,11 @@ void DlgSetSegmentClearance::DoDataExchange(CDataExchange* pDX)
 		if(      m_radio2_apply_seg.GetCheck() ) m_apply = 1;
 		else if( m_radio2_apply_con.GetCheck() ) m_apply = 2;
 		else if( m_radio2_apply_net.GetCheck() ) m_apply = 3;
-		else m_apply = 0;
+		else                                     m_apply = 1;
+
+		if(      m_radio3_no    .GetCheck() ) { m_clearance_pinvia.m_ca_clearance.undef(); }
+		else if( m_radio3_as_sel.GetCheck() ) { m_clearance_pinvia = m_clearance; }
+		else                                  { m_clearance_pinvia.m_ca_clearance = CClearanceInfo::E_AUTO_CALC; }
 	}
 }
 
@@ -101,16 +107,16 @@ BOOL DlgSetSegmentClearance::OnInitDialog()
 	}
 
 	// Must come after mode selection
-	if (m_clearance.m_ca_clearance.m_status < 0)
+	if( m_clearance.m_ca_clearance.m_status < 0 )
 	{
+		// Just to make sure
+		m_clearance.m_ca_clearance.m_status = CInheritableInfo::E_USE_PARENT;
+
 		// Using net default
 		m_radio1_use_net_default.SetCheck(1);
 		m_edit_clearance.EnableWindow(0);
 		m_check_def_net.EnableWindow(0);
 		m_check_def_net.SetCheck( 0 );
-
-		// Just to make sure
-		m_clearance.m_ca_clearance = CInheritableInfo::E_USE_PARENT;
 	}
 	else
 	{
@@ -122,9 +128,11 @@ BOOL DlgSetSegmentClearance::OnInitDialog()
 
 	CString str;
 
-	m_clearance.Update_ca_clearance();
+	m_clearance.Update();
 	str.Format("%d", m_clearance.m_ca_clearance.m_val / NM_PER_MIL);
 	m_edit_clearance.SetWindowText(str);
+
+	m_radio3_auto.SetCheck( 1 );
 
 	return TRUE;
 }

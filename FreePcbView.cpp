@@ -178,6 +178,7 @@ ON_COMMAND(ID_NONE_ADDCOPPERAREA, OnAddArea)
 ON_COMMAND(ID_ENDVERTEX_ADDVIA, OnEndVertexAddVia)
 ON_COMMAND(ID_ENDVERTEX_REMOVEVIA, OnEndVertexRemoveVia)
 ON_COMMAND(ID_ENDVERTEX_SETSIZE, OnVertexSize)
+ON_COMMAND(ID_ENDVERTEX_SETVIACLEARANCE, OnVertexClearance)
 ON_MESSAGE( WM_USER_VISIBLE_GRID, OnChangeVisibleGrid )
 ON_COMMAND(ID_ADD_TEXT, OnTextAdd)
 ON_COMMAND(ID_SEGMENT_DELETETRACE, OnSegmentDeleteTrace)
@@ -1272,7 +1273,7 @@ void CFreePcbView::OnLButtonUp(UINT nFlags, CPoint point)
 			pDC->SelectClipRgn( &m_pcb_rgn );
 //			m_dlist->StopDragging();
 			// get trace widths
-			int w = m_Doc->m_trace_w;
+			int w = m_Doc->m_def_width.m_seg_width.;
 			int via_w = m_Doc->m_via_w;
 			int via_hole_w = m_Doc->m_via_hole_w;
 			GetWidthsForSegment( &w, &via_w, &via_hole_w );
@@ -5590,27 +5591,6 @@ int CFreePcbView::SetClearance( int mode )
 	return 0;
 }
 
-
-// Get trace and via widths
-// tries default widths for net, then board
-//
-int CFreePcbView::GetWidthsForSegment( int * w, int * via_w, int * via_hole_w )
-{
-	*w = m_Doc->m_trace_w;
-	if( m_sel_net->def_w )
-		*w = m_sel_net->def_w;
-
-	*via_w = m_Doc->m_via_w;
-	if( m_sel_net->def_via_w )
-		*via_w = m_sel_net->def_via_w;
-
-	*via_hole_w = m_Doc->m_via_hole_w;
-	if( m_sel_net->def_via_hole_w )
-		*via_hole_w = m_sel_net->def_via_hole_w;
-
-	return 0;
-}
-
 // context-sensitive menu invoked by right-click
 //
 void CFreePcbView::OnContextMenu(CWnd* pWnd, CPoint point )
@@ -5787,11 +5767,15 @@ void CFreePcbView::OnContextMenu(CWnd* pWnd, CPoint point )
 		pPopup = menu.GetSubMenu(CONTEXT_END_VERTEX);
 		ASSERT(pPopup != NULL);
 		if( m_sel_vtx.via_w )
+		{
 			pPopup->EnableMenuItem( ID_ENDVERTEX_ADDVIA, MF_GRAYED );
+		}
 		else
 		{
-			pPopup->EnableMenuItem( ID_ENDVERTEX_SETSIZE, MF_GRAYED );
 			pPopup->EnableMenuItem( ID_ENDVERTEX_REMOVEVIA, MF_GRAYED );
+
+			pPopup->EnableMenuItem( ID_ENDVERTEX_SETSIZE, MF_GRAYED );
+			pPopup->EnableMenuItem( ID_ENDVERTEX_SETVIACLEARANCE, MF_GRAYED );
 		}
 		pPopup->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, point.x, point.y, pWnd );
 		break;
@@ -6464,16 +6448,15 @@ void CFreePcbView::OnRatlineRoute()
 			}
 		}
 	}
+
 	// now start dragging new segment
-	int w = m_Doc->m_trace_w;
-	int via_w = m_Doc->m_via_w;
-	int via_hole_w = m_Doc->m_via_hole_w;
-	GetWidthsForSegment( &w, &via_w, &via_hole_w );
 	m_dragging_new_item = 0;
+
 	m_Doc->m_nlist->StartDraggingSegment( pDC, m_sel_net, m_sel_ic, m_sel_is,
 		p.x, p.y, m_active_layer,
-		LAY_SELECTION, w,
-		last_seg_layer, via_w, via_hole_w, m_dir, 2 );
+		LAY_SELECTION, 
+		last_seg_layer, m_dir, 2 );
+
 	SetCursorMode( CUR_DRAG_RAT );
 	ReleaseDC( pDC );
 }
@@ -8871,8 +8854,7 @@ void CFreePcbView::OnNetEditnet()
 	{
 		m_Doc->ResetUndoState();
 		CancelSelection();
-		m_Doc->m_nlist->ImportNetListInfo( &nl, 0, NULL,
-			m_Doc->m_trace_w, m_Doc->m_via_w, m_Doc->m_via_hole_w );
+		m_Doc->m_nlist->ImportNetListInfo( &nl, 0, NULL, m_Doc->m_def_width );
 		Invalidate( FALSE );
 	}
 }
@@ -10157,18 +10139,6 @@ void CFreePcbView::OnAreaEdit()
 	}
 }
 
-
-void CFreePcbView::OnAreaEdgeApplyClearances()
-{
-	//** this is for testing only
-	SaveUndoInfoForAllNetsAndConnectionsAndAreas( TRUE, m_Doc->m_undo_list );
-	m_Doc->m_nlist->ApplyClearancesToArea( m_sel_net, m_sel_ia, m_Doc->m_cam_flags,
-		254000 /* m_Doc->m_fill_clearance*/, m_Doc->m_min_silkscreen_stroke_wid,
-		m_Doc->m_thermal_width, m_Doc->m_hole_clearance );
-	CancelSelection();
-	m_Doc->ProjectModified( TRUE );
-	Invalidate( FALSE );
-}
 
 void CFreePcbView::ReselectNetItemIfConnectionsChanged( int new_ic )
 {

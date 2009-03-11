@@ -289,9 +289,12 @@
 #define IDC_APPLY_SEG                   1012
 #define IDC_EDIT_LAYER_11               1012
 #define IDC_RADIO_DEF_VIA               1013
+#define IDC_APPLY_PINVIA_NO             1013
 #define IDC_RADIO_SET_VIA               1014
 #define IDC_EDIT_LAYER_12               1014
+#define IDC_APPLY_PINVIA_AUTO           1014
 #define IDC_EDIT_LAYER_13               1015
+#define IDC_APPLY_PINVIA_AS_SEL         1015
 #define IDC_EDIT_LAYER_14               1016
 #define IDC_PART_LIB_TREE               1017
 #define IDC_EDIT_LAYER_15               1017
@@ -736,6 +739,7 @@
 #define IDC_RADIO_USE_NET_CLEARANCE     1440
 #define IDC_BUTTON_LAYER_11             1441
 #define IDC_RADIO_USE_NET_CLEARANCE2    1441
+#define IDC_RADIO_PIN_AUTO_CLEARANCE    1441
 #define IDC_BUTTON_LAYER_12             1442
 #define IDC_BUTTON_LAYER_13             1443
 #define IDC_BUTTON_LAYER_14             1444
@@ -783,6 +787,10 @@
 #define IDC_STATIC_LAYER_27             1497
 #define IDC_STATIC_LAYER_28             1498
 #define ID_HELP_FPCROUTE                1499
+#define IDC_RADIO_SET_PIN_CLEARANCE     1500
+#define IDC_RADIO_PIN_SET_CLEARANCE     1500
+#define IDC_RADIO_PIN_NET_CLEARANCE     1501
+#define IDC_APPLY_PIN                   1502
 #define ID_BUTTON32771                  32771
 #define ID_FP_MOVE                      32772
 #define ID_FP_EDITPROPERTIES            32773
@@ -940,6 +948,7 @@
 #define ID_VERTEX_SETVIACLEARANCE       32947
 #define ID_VERTEX_CLEARANCE             32948
 #define ID_VERTEX_SETCLEARANCE          32949
+#define ID_ENDVERTEX_SETVIACLEARANCE    32950
 
 // Next default values for new objects
 // 
@@ -947,8 +956,8 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        358
-#define _APS_NEXT_COMMAND_VALUE         32950
-#define _APS_NEXT_CONTROL_VALUE         1500
+#define _APS_NEXT_COMMAND_VALUE         32951
+#define _APS_NEXT_CONTROL_VALUE         1503
 #define _APS_NEXT_SYMED_VALUE           106
 #endif
 #endif

@@ -22,14 +22,14 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 public:
-	int m_width;
-	int m_via_width;
-	int m_hole_width;
-	CClearanceInfo m_clearance;
+	CConnectionWidthInfo m_width;
+	CClearanceInfo       m_clearance;
+
 	BOOL m_apply_trace;
 	BOOL m_apply_via;
 	BOOL m_apply_clearance;
 	BOOL m_apply_to_routed;
+
 	CArray<int> *m_w;
 	CArray<int> *m_v_w;
 	CArray<int> *m_v_h_w;

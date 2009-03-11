@@ -393,15 +393,15 @@ BOOL CDlgEditNet::OnInitDialog()
 	m_button_set_width.SetCheck( 0 );
 	m_check_visible.SetCheck( m_visible );
 
-	m_clearance.Update_ca_clearance();
+	m_clearance.Update();
 
-	if (m_clearance.m_ca_clearance.m_status < 0)
+	if( m_clearance.m_ca_clearance.m_status < 0 )
 	{
+		// Just to make sure
+		m_clearance.m_ca_clearance.m_status = CClearanceInfo::E_USE_PARENT;
+
 		m_radio2_def_clearance.SetCheck(1);
 		m_edit_clearance.EnableWindow(0);
-
-		// Just to make sure
-		m_clearance.m_ca_clearance = CClearanceInfo::E_USE_PARENT;
 	}
 	else
 	{

@@ -180,12 +180,12 @@ void CDlgGroupPaste::DoDataExchange(CDataExchange* pDX)
 			str.Format( "%d", ::gnl[i].v_h_w/NM_PER_MIL );
 			m_list_ctrl.SetItem( i, COL_HOLE_W, LVIF_TEXT, str, 0, 0, 0, 0 );
 
-			if (::gnl[i].clearance.m_ca_clearance.m_status < 0)
+			if( ::gnl[i].clearance.m_ca_clearance.m_status < 0 )
 			{
-				str.Format("Default");
-
 				// Just to make sure
-				::gnl[i].clearance.m_ca_clearance = CClearanceInfo::E_USE_PARENT;
+				::gnl[i].clearance.m_ca_clearance.m_status = CClearanceInfo::E_USE_PARENT;
+
+				str.Format("Default");
 			}
 			else
 			{

@@ -6,7 +6,21 @@
 //
 #include "stdafx.h"
 #include <math.h>
+
 #include "memdc.h"
+
+#include "dle_arc.h"
+#include "dle_centroid.h"
+#include "dle_circle.h"
+#include "dle_donut.h"
+#include "dle_hole.h"
+#include "dle_line.h"
+#include "dle_octagon.h"
+#include "dle_oval.h"
+#include "dle_rect.h"
+#include "dle_rect_rounded.h"
+#include "dle_square.h"
+#include "dle_x.h"
 
 // dimensions passed to DisplayList from the application are in PCBU (i.e. nm)
 // since the Win95/98 GDI uses 16-bit arithmetic, PCBU must be scaled to DU (i.e. mils)
@@ -105,7 +119,7 @@ void CDisplayList::RemoveAllFromLayer( int layer )
 	CDLinkList *pLIST = &m_LIST_job[layer];
 	for (;;)
 	{
-		if (pLIST->next == pLIST) break;
+		if( pLIST->next == pLIST ) break;
 
 		delete static_cast<CDL_job*>(pLIST->next);
 	}
@@ -250,7 +264,6 @@ dl_element * CDisplayList::CreateDLE( int gtype )
 		case DL_HOLLOW_OVAL:    new_element = new CDLE_HOLLOW_OVAL;    break;
 		case DL_HOLLOW_OCTAGON: new_element = new CDLE_HOLLOW_OCTAGON; break;
 		case DL_RECT_X:         new_element = new CDLE_RECT_X;         break;
-		case DL_POINT:          new_element = new CDLE_POINT;          break;
 		case DL_ARC_CW:         new_element = new CDLE_ARC_CW;         break;
 		case DL_ARC_CCW:        new_element = new CDLE_ARC_CCW;        break;
 		case DL_CENTROID:       new_element = new CDLE_CENTROID;       break;
@@ -276,7 +289,7 @@ dl_element * CDisplayList::CreateDLE( id id, void * ptr, int layer, int gtype, i
 	// create new element
 	dl_element * new_element = CreateDLE( gtype );
 
-	if (layer == LAY_RAT_LINE)
+	if( layer == LAY_RAT_LINE )
 	{
 		new_element->w = m_ratline_w;
 	}
@@ -337,7 +350,7 @@ CDL_job_traces * CDisplayList::GetJob_traces( int layer )
 	CDL_job_traces *pJob;
 	CDLinkList *pElement = m_LIST_job[layer].next;
 
-	if ( pElement == &m_LIST_job[layer] )
+	if( pElement == &m_LIST_job[layer] )
 	{
 		pJob = new CDL_job_traces(this);
         m_LIST_job[layer].insert_after(pJob);
@@ -605,7 +618,7 @@ void CDisplayList::Draw( CDC * dDC )
 		  continue;
 		}
 
-		if (layer > LAY_BOARD_OUTLINE)
+		if( layer > LAY_BOARD_OUTLINE )
 		{
 			// Use transparent DC in dcMemory
 			di.DC = &dcMemory;
@@ -632,7 +645,7 @@ void CDisplayList::Draw( CDC * dDC )
 			pJob->Draw(di);
 		}
 
-		if (di.DC != di.DC_Master)
+		if( di.DC != di.DC_Master )
 		{
 			// di.DC is a monochrome mask
 
@@ -941,10 +954,9 @@ void * CDisplayList::TestSelect( int x, int y, id * sel_id, int * sel_layer,
 								id * include_id, int n_include_ids )
 {
 	// Get the traces job (last in job list)
-	CDLinkList *pElement = m_LIST_job[LAY_SELECTION].prev;
-	if ( (pElement != &m_LIST_job[LAY_SELECTION]) && m_vis[LAY_SELECTION])
+	if( m_vis[LAY_SELECTION] )
 	{
-        CDL_job *pJob = static_cast<CDL_job*>(pElement);
+		CDL_job_traces *pJob = GetJob_traces(LAY_SELECTION);
 
 		CPoint point(x/m_pcbu_per_wu, y/m_pcbu_per_wu);
 
@@ -980,10 +992,10 @@ void * CDisplayList::TestSelect( int x, int y, id * sel_id, int * sel_layer,
 					{
 						id * inc_id = &include_id[inc];
 						if( inc_id->type == hit_info[i].ID.type
-							&& ( inc_id->st == 0 || inc_id->st == hit_info[i].ID.st )
-							&& ( inc_id->i == 0 || inc_id->i == hit_info[i].ID.i )
+							&& ( inc_id->st  == 0 || inc_id->st  == hit_info[i].ID.st )
+							&& ( inc_id->i   == 0 || inc_id->i   == hit_info[i].ID.i )
 							&& ( inc_id->sst == 0 || inc_id->sst == hit_info[i].ID.sst )
-							&& ( inc_id->ii == 0 || inc_id->ii == hit_info[i].ID.ii ) )
+							&& ( inc_id->ii  == 0 || inc_id->ii  == hit_info[i].ID.ii ) )
 						{
 							included_hit = TRUE;
 							break;
