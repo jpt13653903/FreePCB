@@ -27,7 +27,8 @@
 #include "PartList.h"
 #include "PolyLine.h"
 #include "UndoList.h"
-#include "clearance.h"
+#include "ii_clearance.h"
+#include "ii_seg_width.h"
 
 extern int m_layer_by_file_layer[MAX_LAYERS];
 
@@ -100,10 +101,14 @@ struct undo_area {
 struct undo_seg {
 	int layer;				// copper layer
 
-	int width;				// width
-	int via_w, via_hole_w;	// via width and hole width
+	CSegWidthInfo width;
+	//int width;				// width
+	//int via_w, via_hole_w;	// via width and hole width
 
 	CClearanceInfo clearance;
+
+	// Placement new
+	static void *operator new(size_t size, void *pMem) { return pMem; }
 };
 
 struct undo_vtx {
@@ -111,7 +116,12 @@ struct undo_vtx {
 	int pad_layer;			// layer of pad if this is first or last vertex
 	int force_via_flag;		// force a via even if no layer change
 	int tee_ID;				// identifier for t-connection
-	int via_w, via_hole_w;	// via width and hole width (via_w==0 means no via)
+
+	CConnectionWidthInfo width; // via width and hole width  BAF FIX
+	CClearanceInfo       clearance;
+
+	// Placement new
+	static void *operator new(size_t size, void *pMem) { return pMem; }
 };
 
 struct undo_con {
@@ -144,9 +154,7 @@ struct net_info {
 	CString name;
 	cnet * net;
 	BOOL visible;
-	int w;
-	int v_w;
-	int v_h_w;
+	CConnectionWidthInfo width;
 	CClearanceInfo clearance;
 	BOOL apply_trace_width;
 	BOOL apply_via_width;
@@ -194,66 +202,69 @@ public:
 class cseg
 {
 public:
+	int layer;				  // copper layer
+	CSegWidthInfo  seg_width; // width
+	CClearanceInfo seg_clearance; // clearances
+	int selected;			  // 1 if selected for editing
+	dl_element * dl_el;		  // display element for segment
+	dl_element * dl_sel;	  // selection line
+	CDisplayList * m_dlist;
+	int utility;
+
+public:
 	cseg()
 	{
 		// constructor
-		m_dlist = 0;  // this must be filled in with Initialize()
+		m_dlist = NULL;  // this must be filled in with Initialize()
+
 		layer = 0;
-		width = 0;
-//		via_w = 0;
-//		via_hole_w = 0;
 		selected = 0;
-		dl_el = 0;
-		dl_sel = 0;
+		dl_el = NULL;
+		dl_sel = NULL;
 		utility = 0;
 	}
+
 	~cseg()
 	{
 		// destructor
 		RemoveFromDL();
 	}
 
+
 	void RemoveFromDL()
 	{
     	if (dl_el)
     	{
     	    dl_el->Remove();
-    	    dl_el = 0;
+    	    dl_el = NULL;
         }
 
     	if (dl_sel)
     	{
     	    dl_sel->Remove();
-    	    dl_sel = 0;
+    	    dl_sel = NULL;
         }
 	}
 
-	void Initialize( CDisplayList * dlist ){m_dlist = dlist;}
-	int layer;				  // copper layer
-	int width;				  // width
-	CClearanceInfo clearance; // clearances
-//	int via_w, via_hole_w;	  // via width and hole width
-	int selected;			  // 1 if selected for editing
-	dl_element * dl_el;		  // display element for segment
-	dl_element * dl_sel;	  // selection line
-	CDisplayList * m_dlist;
-	int utility;
+	void Initialize( CDisplayList * dlist ) { m_dlist = dlist; }
+
+	int width()     const { return seg_width.m_seg_width.m_val; }
+	int clearance() const { return seg_clearance.m_ca_clearance.m_val; }
 };
 
 // cvertex: describes a vertex between segments
 class cvertex
 {
 public:
-	cvertex()
+	cvertex() :
+		via_width( 0,0,0 ),
+		vtx_clearance( CClearanceInfo::E_AUTO_CALC )
 	{
 		// constructor
 		m_dlist = 0;	// this must set with Initialize()
 		x = 0; y = 0;
 		pad_layer = 0;	// only for first or last
 		force_via_flag = 0;		// only used for end of stub trace
-		via_w = 0;
-		via_hole_w = 0;
-		clearance.m_ca_clearance = CClearanceInfo::E_AUTO_CALC;
 		dl_sel = 0;
 		dl_hole = 0;
 		tee_ID = 0;
@@ -268,21 +279,19 @@ public:
 			for( int il=0; il<dl_el.GetSize(); il++ )
 				dl_el[il]->Remove();
 
-			if( dl_sel )
-				dl_sel->Remove();
-			if( dl_hole )
-				dl_hole->Remove();
+			if( dl_sel )  dl_sel->Remove();
+			if( dl_hole ) dl_hole->Remove();
 		}
 	}
-	cvertex &operator=( cvertex &v )	// assignment operator
+	cvertex &operator=( cvertex &v )	// assignment operator BAF FIX to be const
 	{
 		// copy all params
 		x = v.x;
 		y = v.y;
 		pad_layer = v.pad_layer;
 		force_via_flag = v.force_via_flag;
-		via_w = v.via_w;
-		via_hole_w = v.via_hole_w;
+		via_width = v.via_width;
+		vtx_clearance = v.vtx_clearance;
 		m_dlist = v.m_dlist;
 		tee_ID = v.tee_ID;
 		utility = v.utility;
@@ -291,21 +300,25 @@ public:
 		// copy dl_elements and remove from source
 		// they still need to be renumbered
 		if( dl_hole )
-			m_dlist->Remove( dl_hole );
+			dl_hole->Remove();
 		dl_hole = v.dl_hole;
 		v.dl_hole = NULL;
 
 		if( dl_sel )
-			m_dlist->Remove( dl_sel );
+			dl_sel->Remove();
 		dl_sel = v.dl_sel;
 		v.dl_sel = NULL;
 
 		for( int il=0; il<dl_el.GetSize(); il++ )
-			m_dlist->Remove( dl_el[il] );
+		{
+			dl_el[il]->Remove();
+		}
 		dl_el.RemoveAll();
 
 		for( int il=0; il<v.dl_el.GetSize(); il++ )
+		{
 			dl_el.Add( v.dl_el[il] );
+		}
 		v.dl_el.RemoveAll();
 
 		return *this;
@@ -314,14 +327,21 @@ public:
 	int x, y;					// coords
 	int pad_layer;				// layer of pad if this is first or last vertex, otherwise 0
 	int force_via_flag;			// force a via even if no layer change
-	int via_w, via_hole_w;		// via width and hole width (via_w==0 means no via)
-	CClearanceInfo clearance;   // via clearance
+	CConnectionWidthInfo via_width; // via width and hole width (via_w==0 means no via) BAF-use CViaWidthInfo when complete
+	CClearanceInfo vtx_clearance; // via clearance
 	CArray<dl_element*> dl_el;	// array of display elements for each layer
 	dl_element * dl_sel;		// selection box
 	dl_element * dl_hole;		// hole in via
 	CDisplayList * m_dlist;
 	int tee_ID;					// used to flag a t-connection point
 	int utility, utility2;		// used for various functions
+
+	int via_w()         const { return via_width.m_via_width.m_val; }
+	int via_hole_w()    const { return via_width.m_via_hole.m_val; }
+	int via_clearance() const { return vtx_clearance.m_ca_clearance.m_val; }
+
+	int viaExists() const { return via_w(); }
+	void SetNoVia() { via_width.m_via_width = via_width.m_via_hole = 0; }
 };
 
 // cconnect: describes a connection between two pins or a stub trace with no end pin
@@ -357,8 +377,7 @@ public:
 class cnet
 {
 public:
-	cnet( CDisplayList * dlist ) :
-		def_clearance(CClearanceInfo::E_USE_PARENT)
+	cnet( CDisplayList * dlist )
 	{
 		m_dlist = dlist;
 	}
@@ -371,9 +390,7 @@ public:
 	CArray<cpin> pin;	// array of pins
 	int nareas;			// number of copper areas
 	CArray<carea,carea> area;	// array of copper areas
-	int def_w;			// default trace width
-	int def_via_w;		// default via width
-	int def_via_hole_w;	// default via hole width
+	CConnectionWidthInfo  def_width;      // default widths
 	CClearanceInfo def_clearance;  // default clearances
 	BOOL visible;		// FALSE to hide ratlines and make unselectable
 	int utility;		// used to keep track of which nets have been optimized
@@ -404,7 +421,7 @@ public:
 	CNetList( CDisplayList * dlist, CPartList * plist );
 	~CNetList();
 	void SetNumCopperLayers( int layers ){ m_layers = layers;};
-	void SetWidths( int trace_w, int via_w, int via_hole_w, CClearanceInfo const &clearance );
+	void SetWidths( CConnectionWidthInfo const &width, CClearanceInfo const &clearance );
 	void SetViaAnnularRing( int ring ){ m_annular_ring = ring; };
 	void SetSMTconnect( BOOL bSMTconnect ){ m_bSMT_connect = bSMTconnect; };
 
@@ -412,7 +429,7 @@ public:
 	void MarkAllNets( int utility );
 	void MoveOrigin( int x_off, int y_off );
 	cnet * GetNetPtrByName( CString * name );
-	cnet * AddNet( CString name, int max_pins, int def_width, int def_via_w, int def_via_hole_w, CClearanceInfo const &clearance );
+	cnet * AddNet( CString name, int max_pins, CConnectionWidthInfo const &def_width, CClearanceInfo const &def_clearance );
 	void RemoveNet( cnet * net );
 	void RemoveAllNets();
 	void AddNetPin( cnet * net, CString * ref_des, CString * pin_name, CClearanceInfo const &clearance, BOOL set_areas=TRUE );
@@ -423,7 +440,7 @@ public:
 	void DisconnectNetPin( cpart * part, CString * pin_name );
 	void DisconnectNetPin( cnet * net, CString * ref_des, CString * pin_name );
 	int GetNetPinIndex( cnet * net, CString * ref_des, CString * pin_name );
-	int SetNetWidth( cnet * net, int w, int via_w, int via_hole_w );
+	int SetNetWidth( cnet * net, CConnectionWidthInfo const &width );
 	int SetNetClearance( cnet * net, CClearanceInfo const &clearance );
 	int UpdateNetAttributes( cnet * net );
 	void SetNetVisibility( cnet * net, BOOL visible );
@@ -435,7 +452,6 @@ public:
 	cnet * GetFirstNet();
 	cnet * GetNextNet();
 	void CancelNextNet();
-	void GetWidths( cnet * net, int * w, int * via_w, int * via_hole_w );
 	BOOL GetNetBoundaries( CRect * r );
 
 	// functions for connections
@@ -443,7 +459,7 @@ public:
 	int AddNetStub( cnet * net, int p1 );
 	int RemoveNetConnect( cnet * net, int ic, BOOL set_areas=TRUE );
 	int UnrouteNetConnect( cnet * net, int ic );
-	int SetConnectionWidth( cnet * net, int ic, int w, int via_w, int via_hole_w );
+	int SetConnectionWidth( cnet * net, int ic, CConnectionWidthInfo const &width );
 	int SetConnectionClearance( cnet * net, int ic, CClearanceInfo const &clearance );
 	void OptimizeConnections();
 	int OptimizeConnections( cnet * net, int ic=-1 );
@@ -461,25 +477,25 @@ public:
 	void CleanUpAllConnections( CString * logstr=NULL );
 
 	// functions for segments
-	int AppendSegment( cnet * net, int ic, int x, int y, int layer, int width, CClearanceInfo const &clearance );
-	int AppendSegment( cnet * net, int ic, int x, int y, int layer, int width )
+	int AppendSegment( cnet * net, int ic, int x, int y, int layer, CSegWidthInfo const &width, CClearanceInfo const &clearance );
+	int AppendSegment( cnet * net, int ic, int x, int y, int layer, CSegWidthInfo const &width )
 	{
 		return AppendSegment( net, ic, x, y, layer, width, CClearanceInfo() );
 	}
 
 	int InsertSegment( cnet * net, int ic, int iseg, int x, int y, int layer,
-						int width, int via_width, int via_hole_width,
+						CConnectionWidthInfo const &width,
 						CClearanceInfo const &clearance,
 						int dir );
 	int InsertSegment( cnet * net, int ic, int iseg, int x, int y, int layer,
-						int width, int via_width, int via_hole_width,
+						CConnectionWidthInfo const &width,
 						int dir )
 	{
-		return InsertSegment( net, ic, iseg, x, y, layer, width, via_width, via_hole_width, CClearanceInfo(), dir );
+		return InsertSegment( net, ic, iseg, x, y, layer, width, CClearanceInfo(), dir );
 	}
 
-	int RouteSegment( cnet * net, int ic, int iseg, int layer, int width, CClearanceInfo const &clearance );
-	int RouteSegment( cnet * net, int ic, int iseg, int layer, int width)
+	int RouteSegment( cnet * net, int ic, int iseg, int layer, CSegWidthInfo const &width, CClearanceInfo const &clearance );
+	int RouteSegment( cnet * net, int ic, int iseg, int layer, CSegWidthInfo const &width )
 	{
 		return RouteSegment( net, ic, iseg, layer, width, CClearanceInfo() );
 	}
@@ -489,14 +505,14 @@ public:
 	id MergeUnroutedSegments( cnet * net, int ic );
 	void RemoveSegment( cnet * net, int ic, int iseg, BOOL bHandleTees=FALSE );
 	int ChangeSegmentLayer( cnet * net, int ic, int iseg, int layer );
-	int SetSegmentWidth( cnet * net, int ic, int is, int w, int via_w, int via_hole_w );
+	int SetSegmentWidth( cnet * net, int ic, int is, CConnectionWidthInfo const &width );
 	int SetSegmentClearance( cnet * net, int ic, int is, CClearanceInfo const &clearance );
 	void HighlightSegment( cnet * net, int ic, int iseg );
 	int StartMovingSegment( CDC * pDC, cnet * net, int ic, int ivtx,
 								   int x, int y, int crosshair, int use_third_segment );
 	int StartDraggingSegment( CDC * pDC, cnet * net, int ic, int iseg,
-						int x, int y, int layer1, int layer2, int w,
-						int layer_no_via, int via_w, int via_hole_w, int dir,
+						int x, int y, int layer1, int layer2,
+						int layer_no_via, int dir,
 						int crosshair = 1 );
 	int CancelDraggingSegment( cnet * net, int ic, int iseg );
 	int StartDraggingSegmentNewVertex( CDC * pDC, cnet * net, int ic, int iseg,
@@ -585,8 +601,7 @@ public:
 	int WriteNets( CStdioFile * file );
 	void ReadNets( CStdioFile * pcb_file, double read_version, int * layers=NULL );
 	void ExportNetListInfo( netlist_info * nl );
-	void ImportNetListInfo( netlist_info * nl, int flags, CDlgLog * log,
-		int def_w, int def_w_v, int def_w_v_h );
+	void ImportNetListInfo( netlist_info * nl, int flags, CDlgLog * log, CConnectionWidthInfo const &def_width );
 	void Copy( CNetList * nl );
 	void RestoreConnectionsAndAreas( CNetList * old_nl, int flags, CDlgLog * log=NULL );
 	void ReassignCopperLayers( int n_new_layers, int * layer );
@@ -620,7 +635,7 @@ private:
 	CDisplayList * m_dlist;
 	CPartList * m_plist;
 	int m_layers;	// number of copper layers
-	int m_def_w, m_def_via_w, m_def_via_hole_w;
+	CConnectionWidthInfo  m_def_width;
 	CClearanceInfo m_def_clearance;
 	int m_pos_i;	// index for iterators
 	POSITION m_pos[MAX_ITERATORS];	// iterators for nets

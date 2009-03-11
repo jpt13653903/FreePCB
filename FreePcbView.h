@@ -652,7 +652,6 @@ public:
 	LONG OnChangeSnapAngle( UINT wp, LONG lp );
 	LONG OnChangeUnits( UINT wp, LONG lp );
 	afx_msg void OnAreaEdit();
-	afx_msg void OnAreaEdgeApplyClearances();
 	afx_msg void OnGroupSaveToFile();
 	afx_msg void OnGroupCopy();
 	afx_msg void OnGroupCut();

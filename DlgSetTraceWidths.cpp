@@ -49,12 +49,12 @@ void CDlgSetTraceWidths::DoDataExchange(CDataExchange* pDX)
 			str.Format( "%d", (*m_w)[i]/NM_PER_MIL );
 			m_combo_width.InsertString( i, str );
 		}
-		if( m_width > 0 )
+		if( m_width.m_seg_width.is_defined() )
 		{
 			str.Format( "%d", m_width/NM_PER_MIL );
 			m_combo_width.SetWindowText( str );
 		}
-		if( m_via_width > 0 && m_hole_width > 0 )
+		if( m_width.m_via_width.is_defined() && m_width.m_via_hole.is_defined() )
 		{
 			str.Format( "%d", m_via_width/NM_PER_MIL );
 			m_edit_via_pad.SetWindowText( str );
@@ -64,20 +64,22 @@ void CDlgSetTraceWidths::DoDataExchange(CDataExchange* pDX)
 		m_check_trace.SetCheck(1);
 		m_radio_set_trace_width.SetCheck(1);
 		m_check_vias.SetCheck(1);
+
 		if( m_width > 0 )
 			m_radio_set_via_width.SetCheck( 1 );
 		else
 			m_radio_default_via_for_trace.SetCheck( 1 );
+
 		m_check_apply.SetCheck(1);
 
 		// Clearance section
 		if( m_clearance.m_ca_clearance.m_status < 0 )
 		{
+			// Just to make sure
+			m_clearance.m_ca_clearance.m_status = CInheritableInfo::E_USE_PARENT;
+
 			m_radio3_def_clearance.SetCheck(1);
 			m_edit_clearance.EnableWindow(0);
-
-			// Just to make sure
-			m_clearance.m_ca_clearance = CInheritableInfo::E_USE_PARENT;
 		}
 		else
 		{
@@ -129,13 +131,13 @@ void CDlgSetTraceWidths::DoDataExchange(CDataExchange* pDX)
 			int val;
 			if( m_radio3_def_clearance.GetCheck() )
 			{
-				val = CClearanceInfo::E_USE_PARENT;
+				m_clearance.m_ca_clearance.m_status = CClearanceInfo::E_USE_PARENT;
 			}
 			else
 			{
 				CString str;
 				m_edit_clearance.GetWindowText(str);
-				if ( (sscanf(str, "%d", &val) != 1) || (val < 0) || (val > MAX_CLEARANCE_MIL) )
+				if( (sscanf(str, "%d", &val) != 1) || (val < 0) || (val > MAX_CLEARANCE_MIL) )
 				{
 					str.Format("Invalid clearance value (0-%d)", MAX_CLEARANCE_MIL);
 					AfxMessageBox( str );
@@ -144,8 +146,8 @@ void CDlgSetTraceWidths::DoDataExchange(CDataExchange* pDX)
 				}
 
 				val *= NM_PER_MIL;
+				m_clearance.m_ca_clearance = val;
 			}
-			m_clearance.m_ca_clearance = val;
 		}
 	}
 }

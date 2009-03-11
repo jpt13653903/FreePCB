@@ -10,22 +10,42 @@ class CInheritableInfo
 public:
 	enum EStatus
 	{
-		E_USE_VAL = 0,
-		E_UNDEF = -1,
+		E_USE_VAL    =  0,
+		E_UNDEF      = -1,
 		E_USE_PARENT = -2,
 
 		// First available status for derived class
 		E__STATUS_USER = -3
 	};
 
-public:
 	struct Item
 	{
 		short int m_status;
-		int m_val;
+		int       m_val;
 
-		Item() : m_status(E_UNDEF), m_val(0)
+		Item()
 		{
+			undef();
+		}
+
+		Item(int val_status)
+		{
+			// Must clear before set in case val_status
+			// is undef (no assignment is done)
+			undef();
+
+			Set_item_from_int(val_status);
+		}
+
+		int is_defined(void) const 
+		{
+			return m_status != E_UNDEF;
+		}
+
+		void undef(void)
+		{
+			m_status = E_UNDEF;
+			m_val    = 0;
 		}
 
 	public: // operators
@@ -48,8 +68,14 @@ public:
 			return *this;
 		}
 
-		int operator > (Item const &comp) const;
-		int operator < (Item const &comp) const;
+		operator int () const
+		{
+			return Get_item_as_int();
+		}
+
+		int operator >  (Item const &comp) const;
+		int operator == (Item const &comp) const;
+		int operator <  (Item const &comp) const { return !operator >(comp) && !operator ==(comp); }
 
 	public: // Set/Get as int
 		// Set item from int:
@@ -61,9 +87,12 @@ public:
 		{
 			return (m_status == E_USE_VAL) ? m_val : m_status;
 		}
+
+	public: // UNDEF item
+		static const Item UNDEF;
 	};
 
-public:
+public:	// construction and copying/assignment
 	CInheritableInfo() : m_pParent(this)
 	{
 	}
@@ -72,7 +101,6 @@ public:
 	{
 		m_pParent = from.hasParent() ? from.m_pParent : this;
 	}
-
 
 	CInheritableInfo &operator = (CInheritableInfo const &from)
 	{
@@ -89,15 +117,13 @@ public:
 		m_pParent = pParent ? pParent : this;
 	}
 
+	Item const *UpdateItem(int item_id, Item &item) const;
+	virtual Item const &GetItem(int item_id) const;
+
 protected:
 	int hasParent(void) const { return m_pParent != this; }
 
-	// Return 1 to stop, 0 to continue to parent
-	virtual int GetExtendedItem(Item &item, Item const &src) const;
-
-	void GetItem(Item &item) const;
-
-	Item const *GetItem(int offset) const { return reinterpret_cast<Item const *>(reinterpret_cast<char const *>(this) + offset); }
+	virtual void GetItemExt(Item &item, Item const &src) const;
 };
 
 #endif /* !_INHERITABLE_ITEM_H ] */

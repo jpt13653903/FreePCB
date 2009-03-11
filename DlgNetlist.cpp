@@ -54,25 +54,25 @@ int CALLBACK CompareNetlist( LPARAM lp1, LPARAM lp2, LPARAM type )
 
 		case SORT_UP_WIDTH:
 		case SORT_DOWN_WIDTH:
-			if( ::nl[lp1].w > ::nl[lp2].w )
+			if( ::nl[lp1].width.m_seg_width > ::nl[lp2].width.m_seg_width )
 				ret = 1;
-			else if( ::nl[lp1].w < ::nl[lp2].w )
+			else if( ::nl[lp1].width.m_seg_width < ::nl[lp2].width.m_seg_width )
 				ret = -1;
 			break;
 
 		case SORT_UP_VIA_W:
 		case SORT_DOWN_VIA_W:
-			if( ::nl[lp1].v_w > ::nl[lp2].v_w )
+			if( ::nl[lp1].width.m_via_width > ::nl[lp2].width.m_via_width )
 				ret = 1;
-			else if( ::nl[lp1].v_w < ::nl[lp2].v_w )
+			else if( ::nl[lp1].width.m_via_width < ::nl[lp2].width.m_via_width )
 				ret = -1;
 			break;
 
 		case SORT_UP_HOLE_W:
 		case SORT_DOWN_HOLE_W:
-			if( ::nl[lp1].v_h_w > ::nl[lp2].v_h_w )
+			if( ::nl[lp1].width.m_via_hole > ::nl[lp2].width.m_via_hole )
 				ret = 1;
-			else if( ::nl[lp1].v_h_w < ::nl[lp2].v_h_w )
+			else if( ::nl[lp1].width.m_via_hole < ::nl[lp2].width.m_via_hole )
 				ret = -1;
 			break;
 
@@ -211,6 +211,27 @@ BOOL CDlgNetlist::OnInitDialog()
 	return TRUE;
 }
 
+
+CString CDlgNetlist::GetItemText(CInheritableInfo::Item &item) const
+{
+	CString str;
+
+	if( item.m_status < 0 )
+	{
+		// Just to make sure
+		item.m_status = CClearanceInfo::E_USE_PARENT;
+
+		str.Format("Default");
+	}
+	else
+	{
+		str.Format( "%d", item.m_val / NM_PER_MIL );
+	}
+
+	return str;
+}
+
+
 // draw listview control and sort according to m_sort_type
 //
 void CDlgNetlist::DrawListCtrl()
@@ -232,24 +253,17 @@ void CDlgNetlist::DrawListCtrl()
 			m_list_ctrl.SetItem( iItem, COL_NAME, LVIF_TEXT, ::nl[i].name, 0, 0, 0, 0 );
 			str.Format( "%d", ::nl[i].ref_des.GetSize() );
 			m_list_ctrl.SetItem( iItem, COL_PINS, LVIF_TEXT, str, 0, 0, 0, 0 );
-			str.Format( "%d", ::nl[i].w/NM_PER_MIL );
+	
+			str = GetItemText( ::nl[i].width.m_seg_width );
 			m_list_ctrl.SetItem( iItem, COL_WIDTH, LVIF_TEXT, str, 0, 0, 0, 0 );
-			str.Format( "%d", ::nl[i].v_w/NM_PER_MIL );
+
+			str = GetItemText( ::nl[i].width.m_via_width );
 			m_list_ctrl.SetItem( iItem, COL_VIA_W, LVIF_TEXT, str, 0, 0, 0, 0 );
-			str.Format( "%d", ::nl[i].v_h_w/NM_PER_MIL );
+
+			str = GetItemText( ::nl[i].width.m_via_hole );
 			m_list_ctrl.SetItem( iItem, COL_HOLE_W, LVIF_TEXT, str, 0, 0, 0, 0 );
 
-			if (::nl[i].clearance.m_ca_clearance.m_status < 0)
-			{
-				str.Format("Default");
-
-				// Just to make sure
-				::nl[i].clearance.m_ca_clearance = CClearanceInfo::E_USE_PARENT;
-			}
-			else
-			{
-				str.Format( "%d", ::nl[i].clearance.m_ca_clearance.m_val / NM_PER_MIL );
-			}
+			str = GetItemText( ::nl[i].clearance.m_ca_clearance );
 			m_list_ctrl.SetItem( iItem, COL_CLEARANCE, LVIF_TEXT, str, 0, 0, 0, 0 );
 
 			ListView_SetCheckState( m_list_ctrl, nItem, ::nl[i].visible );
@@ -337,8 +351,9 @@ void CDlgNetlist::OnBnClickedButtonEdit()
 	else
 	{
 		POSITION pos = m_list_ctrl.GetFirstSelectedItemPosition();
-		if (pos == NULL)
+		if( pos == NULL )
 			ASSERT(0);
+
 		int nItem = m_list_ctrl.GetNextSelectedItem(pos);
 		int i = m_list_ctrl.GetItemData( nItem );
 
@@ -428,29 +443,25 @@ void CDlgNetlist::OnBnClickedButtonNLWidth()
 	dlg.m_w = &doc->m_w;
 	dlg.m_v_w = &doc->m_v_w;
 	dlg.m_v_h_w = &doc->m_v_h_w;
-	dlg.m_width = 0;
-	dlg.m_via_width = 0;
-	dlg.m_hole_width = 0;
-	dlg.m_clearance.m_ca_clearance = CClearanceInfo::E_USE_PARENT;
+	dlg.m_width = CConnectionWidthInfo(CInheritableInfo::E_USE_PARENT, CInheritableInfo::E_USE_PARENT, CInheritableInfo::E_USE_PARENT);
+	dlg.m_clearance.m_ca_clearance = CInheritableInfo::E_USE_PARENT;
 	if( n_sel == 1 )
 	{
 		POSITION pos = m_list_ctrl.GetFirstSelectedItemPosition();
 		int iItem = m_list_ctrl.GetNextSelectedItem( pos );
 		int i = m_list_ctrl.GetItemData( iItem );
 
-		dlg.m_width = ::nl[i].w;
-		dlg.m_via_width = ::nl[i].v_w;
-		dlg.m_hole_width = ::nl[i].v_h_w;
-
+		dlg.m_width = ::nl[i].width;
         dlg.m_clearance = ::nl[i].clearance;
 	}
 	else
 	{
 		// Assign the project clearance (in doc) as the parent to the clearance
-		dlg.m_clearance.SetParent(doc->m_clearance);
+		dlg.m_clearance.SetParent(doc->m_def_clearance);
 	}
 
-	dlg.m_clearance.Update_ca_clearance();
+	dlg.m_width.Update();
+	dlg.m_clearance.Update();
 
 	int ret = dlg.DoModal();
 	if( ret == IDOK )
@@ -463,17 +474,13 @@ void CDlgNetlist::OnBnClickedButtonNLWidth()
 
 			if( dlg.m_apply_trace )
 			{
-				if( dlg.m_width != -1 )
-					::nl[i].w = dlg.m_width;
+				::nl[i].width.m_seg_width = dlg.m_width.m_seg_width;
 			}
 
 			if( dlg.m_apply_via )
 			{
-				if( dlg.m_via_width != -1 )
-				{
-					::nl[i].v_w = dlg.m_via_width;
-					::nl[i].v_h_w = dlg.m_hole_width;
-				}
+				::nl[i].width.m_via_width = dlg.m_width.m_via_width;
+				::nl[i].width.m_via_hole  = dlg.m_width.m_via_hole;
 			}
 
 			if( dlg.m_apply_clearance )
@@ -485,21 +492,16 @@ void CDlgNetlist::OnBnClickedButtonNLWidth()
 			::nl[i].apply_via_width   = dlg.m_apply_to_routed && dlg.m_apply_via;
     		::nl[i].apply_clearance   = dlg.m_apply_to_routed && dlg.m_apply_clearance;
 
-			str.Format( "%d", ::nl[i].w/NM_PER_MIL );
+			str = GetItemText( ::nl[i].width.m_seg_width );
 			m_list_ctrl.SetItem( iItem, COL_WIDTH, LVIF_TEXT, str, 0, 0, 0, 0 );
-			str.Format( "%d", ::nl[i].v_w/NM_PER_MIL );
+
+			str = GetItemText( ::nl[i].width.m_via_width );
 			m_list_ctrl.SetItem( iItem, COL_VIA_W, LVIF_TEXT, str, 0, 0, 0, 0 );
-			str.Format( "%d", ::nl[i].v_h_w/NM_PER_MIL );
+
+			str = GetItemText( ::nl[i].width.m_via_hole );
 			m_list_ctrl.SetItem( iItem, COL_HOLE_W, LVIF_TEXT, str, 0, 0, 0, 0 );
 
-			if (::nl[i].clearance.m_ca_clearance.m_status < 0)
-			{
-				str.Format("Default");
-			}
-			else
-			{
-				str.Format( "%d", ::nl[i].clearance.m_ca_clearance.m_val / NM_PER_MIL );
-			}
+			str = GetItemText( ::nl[i].clearance.m_ca_clearance );
 			m_list_ctrl.SetItem( iItem, COL_CLEARANCE, LVIF_TEXT, str, 0, 0, 0, 0 );
 		}
 	}
