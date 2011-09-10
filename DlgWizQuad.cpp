@@ -760,12 +760,10 @@ void CDlgWizQuad::OnBnClickedButton2()
 	CDC * pDC = this->GetDC();
 	CRect rw;
 	m_preview.GetClientRect( &rw );
-	int x_size = rw.right - rw.left;
-	int y_size = rw.bottom - rw.top;
-	HENHMETAFILE hMF = m_footprint.CreateMetafile( &m_mfDC, pDC, x_size, y_size );
+	HENHMETAFILE hMF = m_footprint.CreateMetafile( &m_mfDC, pDC, rw );
 	m_preview.SetEnhMetaFile( hMF );
 	ReleaseDC( pDC );
-
+	DeleteEnhMetaFile( hMF );
 }
 
 BOOL CDlgWizQuad::MakeFootprint()

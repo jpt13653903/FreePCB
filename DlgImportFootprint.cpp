@@ -155,12 +155,11 @@ void CDlgImportFootprint::OnTvnSelchangedPartLibTree(NMHDR *pNMHDR, LRESULT *pRe
 		CDC * pDC = this->GetDC();
 		CRect rw;
 		m_preview.GetClientRect( &rw );
-		int x_size = rw.right - rw.left;
-		int y_size = rw.bottom - rw.top;
-		HENHMETAFILE hMF;
-		hMF = m_shape.CreateMetafile( &m_mfDC, pDC, x_size, y_size );
+		HENHMETAFILE hMF = m_shape.CreateMetafile( &m_mfDC, pDC, rw );
 		m_preview.SetEnhMetaFile( hMF );
 		ReleaseDC( pDC );
+		DeleteEnhMetaFile( hMF );
+
 		// update text strings
 		m_edit_author.SetWindowText( m_shape.m_author );
 		m_edit_source.SetWindowText( m_shape.m_source );

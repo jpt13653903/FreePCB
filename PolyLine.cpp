@@ -1113,7 +1113,7 @@ void CPolyLine::Draw(  CDisplayList * dl )
 				else if( side[ic].m_style == ARC_CCW )
 					g_type = DL_ARC_CCW;
 				side[ic].dl_side = m_dlist->Add( sel_id, m_ptr, m_layer, g_type, 
-					1, m_w, 0, xi, yi, xf, yf, 0, 0 );
+					1, m_w, 0, 0, xi, yi, xf, yf, 0, 0 );
 
 				// draw selection rect
 				if( m_sel_box )
@@ -1777,7 +1777,7 @@ void CPolyLine::Hatch()
 				double dx = xx[ip+1] - xx[ip];
 				if( m_hatch == DIAGONAL_FULL || fabs(dx) < 40*NM_PER_MIL )
 				{
-					dl_element * dl = m_dlist->Add( hatch_id, 0, m_layer, DL_LINE, 1, 0, 0, 
+					dl_element * dl = m_dlist->Add( hatch_id, 0, m_layer, DL_LINE, 1, 0, 0, 0,
 						xx[ip], yy[ip], xx[ip+1], yy[ip+1], 0, 0 );
 					dl_hatch.SetAtGrow(nhatch, dl);
 					nhatch++;
@@ -1794,10 +1794,10 @@ void CPolyLine::Hatch()
 					double x2 = xx[ip+1] - dx;
 					double y1 = yy[ip] + dx*slope;
 					double y2 = yy[ip+1] - dx*slope;
-					dl_element * dl = m_dlist->Add( hatch_id, 0, m_layer, DL_LINE, 1, 0, 0, 
+					dl_element * dl = m_dlist->Add( hatch_id, 0, m_layer, DL_LINE, 1, 0, 0, 0,
 						xx[ip], yy[ip], x1, y1, 0, 0 );
 					dl_hatch.SetAtGrow(nhatch, dl);
-					dl = m_dlist->Add( hatch_id, 0, m_layer, DL_LINE, 1, 0, 0, 
+					dl = m_dlist->Add( hatch_id, 0, m_layer, DL_LINE, 1, 0, 0, 0, 
 						xx[ip+1], yy[ip+1], x2, y2, 0, 0 );
 					dl_hatch.SetAtGrow(nhatch+1, dl);
 					nhatch += 2;

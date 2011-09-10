@@ -1882,6 +1882,564 @@ int CShape::WriteFootprint( CStdioFile * file )
 
 // create metafile and draw footprint into it
 //
+HENHMETAFILE CShape::CreateMetafile( CMetaFileDC * mfDC, CDC * pDC, CRect const &window, CString ref, int bDrawSelectionRect )
+{
+	int x_size = window.Width();
+	int y_size = window.Height();
+
+	// get bounds of shape
+	int x_min = INT_MAX;
+	int x_max = INT_MIN;
+	int y_min = INT_MAX;
+	int y_max = INT_MIN;
+	// get bounds of pads
+	for( int ip=0; ip<m_padstack.GetSize(); ip++ )
+	{
+		int x = m_padstack[ip].x_rel;
+		int y = m_padstack[ip].y_rel;
+		int angle = m_padstack[ip].angle;
+		int hole_size = m_padstack[ip].hole_size;
+		pad p = m_padstack[ip].top;
+		if( m_padstack[ip].top.shape == PAD_NONE && m_padstack[ip].bottom.shape != PAD_NONE )
+			p = m_padstack[ip].bottom;
+		int p_x_min, p_x_max, p_y_min, p_y_max;
+		if( p.shape == PAD_ROUND || p.shape == PAD_SQUARE || p.shape == PAD_OCTAGON )
+		{
+			p_x_min = x - p.size_h/2;
+			p_x_max = x + p.size_h/2;
+			p_y_min = y - p.size_h/2;
+			p_y_max = y + p.size_h/2;
+		}
+		else if( p.shape == PAD_NONE )
+		{
+			p_x_min = x - hole_size/2;
+			p_x_max = x + hole_size/2;
+			p_y_min = y - hole_size/2;
+			p_y_max = y + hole_size/2;
+		}
+		else if( p.shape == PAD_RECT || p.shape == PAD_RRECT || p.shape == PAD_OVAL )
+		{
+			CRect pr( -p.size_l, p.size_h/2, p.size_r, -p.size_h/2 );
+			if( angle > 0 )
+				RotateRect( &pr, angle, zero );
+			p_x_min = x + pr.left;
+			p_x_max = x + pr.right;
+			p_y_min = y + pr.bottom;
+			p_y_max = y + pr.top;
+		}
+		else
+			ASSERT(0);
+		x_min = min( x_min, p_x_min );
+		x_max = max( x_max, p_x_max );
+		y_min = min( y_min, p_y_min );
+		y_max = max( y_max, p_y_max );
+	}
+	// get bounds of outline polys
+	for( int ip=0; ip<m_outline_poly.GetSize(); ip++ )
+	{
+		CPolyLine * p = &m_outline_poly[ip];
+		for( int ic=0; ic<p->NumCorners(); ic++ )
+		{
+			int x = p->X( ic );
+			int y = p->Y( ic );
+			x_min = min( x_min, x );
+			x_max = max( x_max, x );
+			y_min = min( y_min, y );
+			y_max = max( y_max, y );
+		}
+	}
+	// get bounds of text
+	for( int it=0; it<m_tl->text_ptr.GetSize(); it++ )
+	{
+		CText * t = m_tl->text_ptr[it];
+		int thickness = t->m_stroke_width/NM_PER_MIL;
+		SMFontUtil * smfontutil = ((CFreePcbApp*)AfxGetApp())->m_Doc->m_smfontutil;
+		CString t_str = t->m_str;
+		double x_scale = (double)t->m_font_size/22.0;
+		double y_scale = (double)t->m_font_size/22.0;
+		double y_offset = 9.0*y_scale;
+		int i = 0;
+		double xc = 0.0;
+		CPoint si, sf;
+		for( int ic=0; ic<t_str.GetLength(); ic++ )
+		{
+			// get stroke info for character
+			int xi, yi, xf, yf;
+			double coord[64][4];
+			double min_x, min_y, max_x, max_y;
+			int nstrokes = smfontutil->GetCharStrokes( t_str[ic], SIMPLEX,
+				&min_x, &min_y, &max_x, &max_y, coord, 64 );
+			for( int is=0; is<nstrokes; is++ )
+			{
+				// get each
+				xi = (coord[is][0] - min_x)*x_scale + xc;
+				yi = coord[is][1]*y_scale + y_offset;
+				xf = (coord[is][2] - min_x)*x_scale + xc;
+				yf = coord[is][3]*y_scale + y_offset;
+				if( yi > yf )
+				{
+					si.x = xi;
+					sf.x = xf;
+					si.y = yi;
+					sf.y = yf;
+				}
+				else
+				{
+					si.x = xf;
+					sf.x = xi;
+					si.y = yf;
+					sf.y = yi;
+				}
+				// move to origin of text box
+				si.x += t->m_x;
+				sf.x += t->m_x;
+				si.y += t->m_y;
+				sf.y += t->m_y;
+				// rotate to angle
+				CPoint text_org( t->m_x, t->m_y );
+				RotatePoint( &si, t->m_angle, text_org );
+				RotatePoint( &sf, t->m_angle, text_org );
+				// draw
+				x_min = min( x_min, min(si.x,sf.x) );
+				x_max = max( x_max, max(si.x,sf.x) );
+				y_min = min( y_min, min(si.y,sf.y) );
+				y_max = max( y_max, max(si.y,sf.y) );
+			}
+			xc += (max_x - min_x + 8.0)*x_scale;
+		}
+	}
+	// get bounds of ref_text
+	x_min = min( x_min, m_ref_xi );
+	x_max = max( x_max, m_ref_xi+3*m_ref_size );
+	y_min = min( y_min, m_ref_yi );
+	y_max = max( y_max, m_ref_yi+m_ref_size );
+
+	// convert to mils
+	x_min = x_min/NM_PER_MIL;
+	x_max = x_max/NM_PER_MIL;
+	y_min = y_min/NM_PER_MIL;
+	y_max = y_max/NM_PER_MIL;
+
+	// set up scale factor for drawing, mils per pixel
+	double x_scale = (double)(x_max-x_min)/(double)x_size;
+	double y_scale = (double)(y_max-y_min)/(double)y_size;
+	double scale = max( x_scale, y_scale) * 1.2;
+	if( scale < 1.0 )
+		scale = 1.0;
+	double x_center = (x_max+x_min)/2;
+	double y_center = (y_max+y_min)/2;
+
+	// set up frame rectangle for metafile
+	int widthmm = pDC->GetDeviceCaps( HORZSIZE );
+	int heightmm = pDC->GetDeviceCaps( VERTSIZE );
+	int widthpixel = pDC->GetDeviceCaps( HORZRES );
+	int heightpixel = pDC->GetDeviceCaps( VERTRES );
+
+	// set up bounding rectangle, with bottom > top, in mils
+	double left = x_center - scale*x_size/2;
+	double right = x_center + scale*x_size/2;
+	double top = y_center - scale*y_size/2;
+	double bottom = y_center + scale*y_size/2;
+	CRect rNM;
+	rNM.left = left*100.0*widthmm/widthpixel;
+	rNM.right = right*100.0*widthmm/widthpixel;
+	rNM.top = -bottom*100.0*heightmm/heightpixel;		// notice Y flipped
+	rNM.bottom = -top*100.0*heightmm/heightpixel;
+	// offsets to ensure that origin is in rNM
+	int xoffset = -(rNM.left+rNM.right)/2;
+	rNM.left += xoffset;
+	rNM.right += xoffset;
+	xoffset = xoffset/(100.0*widthmm/widthpixel);
+	int yoffset = -(rNM.top+rNM.bottom)/2;
+	rNM.top += yoffset;
+	rNM.bottom += yoffset;
+	yoffset = yoffset/(100.0*heightmm/heightpixel);
+	// create enhanced metafile
+	mfDC->CreateEnhanced( NULL, NULL, rNM, NULL );
+	mfDC->SetAttribDC( *pDC );
+
+	// now we can draw using mils
+	// flip Y since metafile likes top < bottom
+	CPen * old_pen;
+	CBrush * old_brush;
+	CPen backgnd_pen( PS_SOLID, 1, C_RGB::black );
+	CBrush backgnd_brush( C_RGB::black );
+	CPen SMT_pad_pen( PS_SOLID, 1, C_RGB::green );
+	CBrush SMT_pad_brush( C_RGB::green );
+	CPen SMT_B_pad_pen( PS_SOLID, 1, C_RGB::red );
+	CBrush SMT_B_pad_brush( C_RGB::red );
+	CPen TH_pad_pen( PS_SOLID, 1, C_RGB::blue );
+	CBrush TH_pad_brush( C_RGB::blue );
+
+	// draw background
+	old_pen = mfDC->SelectObject( &backgnd_pen );
+	old_brush = mfDC->SelectObject( &backgnd_brush );
+	mfDC->Rectangle( rNM );
+
+	// draw pads and holes
+	// iterate twice to draw top copper over bottom copper
+	for( int ipass=0; ipass<2; ipass++ )
+	{
+		for( int ip=0; ip<m_padstack.GetSize(); ip++ )
+		{
+			int x = m_padstack[ip].x_rel/NM_PER_MIL;
+			int y = m_padstack[ip].y_rel/NM_PER_MIL;
+			int angle = m_padstack[ip].angle;
+			int hole_size = m_padstack[ip].hole_size/NM_PER_MIL;
+			pad * p = &m_padstack[ip].top;
+			if( m_padstack[ip].top.shape == PAD_NONE && m_padstack[ip].bottom.shape != PAD_NONE )
+				p = &m_padstack[ip].bottom;
+			int p_x_min, p_x_max, p_y_min, p_y_max;
+			if( hole_size && ipass == 0 )
+				continue;
+			if( p == &m_padstack[ip].top && ipass == 0 )
+				continue;
+			if( p == &m_padstack[ip].bottom && ipass == 1 )
+				continue;
+			if( hole_size )
+			{
+				mfDC->SelectObject( &TH_pad_pen );
+				mfDC->SelectObject( &TH_pad_brush );
+			}
+			else
+			{
+				if( p == &m_padstack[ip].top )
+				{
+					mfDC->SelectObject( &SMT_pad_pen );
+					mfDC->SelectObject( &SMT_pad_brush );
+				}
+				else
+				{
+					mfDC->SelectObject( &SMT_B_pad_pen );
+					mfDC->SelectObject( &SMT_B_pad_brush );
+				}
+			}
+			if( p->shape == PAD_NONE )
+			{
+				p_x_min = x - hole_size/2;
+				p_x_max = x + hole_size/2;
+				p_y_min = y - hole_size/2;
+				p_y_max = y + hole_size/2;
+				mfDC->SelectStockObject( NULL_BRUSH);
+				mfDC->Ellipse( p_x_min+xoffset, -p_y_min+yoffset, p_x_max+xoffset, -p_y_max+yoffset );
+			}
+			else if( p->shape == PAD_ROUND )
+			{
+				p_x_min = x - (p->size_h/NM_PER_MIL)/2;
+				p_x_max = x + (p->size_h/NM_PER_MIL)/2;
+				p_y_min = y - (p->size_h/NM_PER_MIL)/2;
+				p_y_max = y + (p->size_h/NM_PER_MIL)/2;
+				mfDC->Ellipse( p_x_min+xoffset, -p_y_min+yoffset, p_x_max+xoffset, -p_y_max+yoffset );
+				if( hole_size )
+				{
+					mfDC->SelectObject( &backgnd_pen );
+					mfDC->SelectObject( &backgnd_brush );
+					p_x_min = x - hole_size/2;
+					p_x_max = x + hole_size/2;
+					p_y_min = y - hole_size/2;
+					p_y_max = y + hole_size/2;
+					mfDC->Ellipse( p_x_min+xoffset, -p_y_min+yoffset, p_x_max+xoffset, -p_y_max+yoffset );
+				}
+			}
+			else if( p->shape == PAD_SQUARE )
+			{
+				p_x_min = x - (p->size_h/NM_PER_MIL)/2;
+				p_x_max = x + (p->size_h/NM_PER_MIL)/2;
+				p_y_min = y - (p->size_h/NM_PER_MIL)/2;
+				p_y_max = y + (p->size_h/NM_PER_MIL)/2;
+				mfDC->Rectangle( p_x_min+xoffset, -p_y_min+yoffset, p_x_max+xoffset, -p_y_max+yoffset );
+				if( hole_size )
+				{
+					mfDC->SelectObject( &backgnd_pen );
+					mfDC->SelectObject( &backgnd_brush );
+					p_x_min = x - hole_size/2;
+					p_x_max = x + hole_size/2;
+					p_y_min = y - hole_size/2;
+					p_y_max = y + hole_size/2;
+					mfDC->Ellipse( p_x_min+xoffset, -p_y_min+yoffset, p_x_max+xoffset, -p_y_max+yoffset );
+				}
+			}
+			else if( p->shape == PAD_RECT )
+			{
+				CRect pr( -p->size_l, p->size_h/2, p->size_r, -p->size_h/2 );
+				if( angle > 0 )
+					RotateRect( &pr, angle, zero );
+				p_x_min = x + pr.left/NM_PER_MIL;
+				p_x_max = x + pr.right/NM_PER_MIL;
+				p_y_min = y + pr.bottom/NM_PER_MIL;
+				p_y_max = y + pr.top/NM_PER_MIL;
+				mfDC->Rectangle( p_x_min+xoffset, -p_y_min+yoffset, p_x_max+xoffset, -p_y_max+yoffset );
+				if( hole_size )
+				{
+					mfDC->SelectObject( &backgnd_pen );
+					mfDC->SelectObject( &backgnd_brush );
+					p_x_min = x - hole_size/2;
+					p_x_max = x + hole_size/2;
+					p_y_min = y - hole_size/2;
+					p_y_max = y + hole_size/2;
+					mfDC->Ellipse( p_x_min+xoffset, -p_y_min+yoffset, p_x_max+xoffset, -p_y_max+yoffset );
+				}
+			}
+			else if( p->shape == PAD_RRECT )
+			{
+				CRect pr( -p->size_l, p->size_h/2, p->size_r, -p->size_h/2 );
+				if( angle > 0 )
+					RotateRect( &pr, angle, zero );
+				int xi = x + pr.left/NM_PER_MIL;
+				int xf = x + pr.right/NM_PER_MIL;
+				int yi = y + pr.bottom/NM_PER_MIL;
+				int yf = y + pr.top/NM_PER_MIL;
+				int h = xf - xi;
+				int v = yf - yi;
+				int radius = p->radius/NM_PER_MIL;
+				mfDC->RoundRect( xi+xoffset, -yi+yoffset, xf+xoffset, -yf+yoffset, 2*radius, 2*radius );
+				if( hole_size )
+				{
+					mfDC->SelectObject( &backgnd_pen );
+					mfDC->SelectObject( &backgnd_brush );
+					xi = x - hole_size/2;
+					xf = x + hole_size/2;
+					yi = y - hole_size/2;
+					yf = y + hole_size/2;
+					mfDC->Ellipse( xi+xoffset, -yi+yoffset, xf+xoffset, -yf+yoffset );
+				}
+			}
+			else if( p->shape == PAD_OVAL )
+			{
+				CRect pr( -p->size_l, p->size_h/2, p->size_r, -p->size_h/2 );
+				if( angle > 0 )
+					RotateRect( &pr, angle, zero );
+				int xi = x + pr.left/NM_PER_MIL;
+				int xf = x + pr.right/NM_PER_MIL;
+				int yi = y + pr.bottom/NM_PER_MIL;
+				int yf = y + pr.top/NM_PER_MIL;
+				int h = abs(xf-xi);
+				int v = abs(yf-yi);
+				int radius = min(h,v);
+				mfDC->RoundRect( xi+xoffset, -yi+yoffset, xf+xoffset, -yf+yoffset, radius, radius );
+				if( hole_size )
+				{
+					mfDC->SelectObject( &backgnd_pen );
+					mfDC->SelectObject( &backgnd_brush );
+					xi = x - hole_size/2;
+					xf = x + hole_size/2;
+					yi = y - hole_size/2;
+					yf = y + hole_size/2;
+					mfDC->Ellipse( xi+xoffset, -yi+yoffset, xf+xoffset, -yf+yoffset );
+				}
+			}
+			else if( p->shape == PAD_OCTAGON )
+			{
+				const double pi = 3.14159265359;
+				POINT pt[8];
+				double angle = pi/8.0;
+				for( int iv=0; iv<8; iv++ )
+				{
+					pt[iv].x = x + (0.5*p->size_h/NM_PER_MIL) * cos(angle)+xoffset;
+					pt[iv].y = -(y + (0.5*p->size_h/NM_PER_MIL) * sin(angle))+yoffset;
+					angle += pi/4.0;
+				}
+				mfDC->Polygon( pt, 8 );
+				if( hole_size )
+				{
+					mfDC->SelectObject( &backgnd_pen );
+					mfDC->SelectObject( &backgnd_brush );
+					p_x_min = x - hole_size/2;
+					p_x_max = x + hole_size/2;
+					p_y_min = y - hole_size/2;
+					p_y_max = y + hole_size/2;
+					mfDC->Ellipse( p_x_min+xoffset, -p_y_min+yoffset, p_x_max+xoffset, -p_y_max+yoffset );
+				}
+			}
+		}
+	}
+
+	// draw part outline
+	for( int ip=0; ip<m_outline_poly.GetSize(); ip++ )
+	{
+		CPolyLine * p = &m_outline_poly[ip];
+		int thickness = p->W()/NM_PER_MIL;
+		CPen silk_pen( PS_SOLID, thickness, C_RGB::yellow );
+		mfDC->SelectObject( &silk_pen );
+		int x = p->X(0)/NM_PER_MIL;
+		int y = p->Y(0)/NM_PER_MIL;
+		mfDC->MoveTo( x+xoffset, -y+yoffset );
+		for( int ic=1; ic<p->NumCorners(); ic++ )
+		{
+			int next_x = p->X( ic )/NM_PER_MIL;
+			int next_y = p->Y( ic )/NM_PER_MIL;
+			int style = p->SideStyle(ic-1);
+			int dl_shape;
+			if( style == CPolyLine::STRAIGHT )
+				dl_shape = DL_LINE;
+			else if( style == CPolyLine::ARC_CW )
+				dl_shape = DL_ARC_CCW;				// notice CW/CCW flipped since Y flipped
+			else if( style == CPolyLine::ARC_CCW )
+				dl_shape = DL_ARC_CW;
+			else
+				ASSERT(0);
+			::DrawArc( mfDC, dl_shape, x+xoffset, -y+yoffset, next_x+xoffset, -next_y+yoffset, TRUE );
+			x = next_x;
+			y = next_y;
+		}
+		if( p->Closed() )
+		{
+			int next_x = p->X(0)/NM_PER_MIL;
+			int next_y = p->Y(0)/NM_PER_MIL;
+			int style = p->SideStyle(p->NumCorners()-1);
+			int dl_shape;
+			if( style == CPolyLine::STRAIGHT )
+				dl_shape = DL_LINE;
+			else if( style == CPolyLine::ARC_CW )
+				dl_shape = DL_ARC_CCW;				// notice CW/CCW flipped since Y flipped
+			else if( style == CPolyLine::ARC_CCW )
+				dl_shape = DL_ARC_CW;
+			else
+				ASSERT(0);
+			::DrawArc( mfDC, dl_shape, x+xoffset, -y+yoffset, next_x+xoffset, -next_y+yoffset, TRUE );
+		}
+	}
+
+	// draw ref text placeholder
+	int thickness = m_ref_w/NM_PER_MIL;
+	CPen ref_pen( PS_SOLID, thickness, C_RGB::yellow );
+	mfDC->SelectObject( &ref_pen );
+	SMFontUtil * smfontutil = ((CFreePcbApp*)AfxGetApp())->m_Doc->m_smfontutil;
+	x_scale = (double)m_ref_size/22.0;
+	y_scale = (double)m_ref_size/22.0;
+	double y_offset = 9.0*y_scale;
+	int i = 0;
+	double xc = 0.0;
+	CPoint si, sf;
+	for( int ic=0; ic<ref.GetLength(); ic++ )
+	{
+		// get stroke info for character
+		int xi, yi, xf, yf;
+		double coord[64][4];
+		double min_x, min_y, max_x, max_y;
+		int nstrokes = smfontutil->GetCharStrokes( ref[ic], SIMPLEX,
+			&min_x, &min_y, &max_x, &max_y, coord, 64 );
+		for( int is=0; is<nstrokes; is++ )
+		{
+			// draw each stroke
+			xi = (coord[is][0] - min_x)*x_scale + xc;
+			yi = coord[is][1]*y_scale + y_offset;
+			xf = (coord[is][2] - min_x)*x_scale + xc;
+			yf = coord[is][3]*y_scale + y_offset;
+			if( yi > yf )
+			{
+				si.x = xi;
+				sf.x = xf;
+				si.y = yi;
+				sf.y = yf;
+			}
+			else
+			{
+				si.x = xf;
+				sf.x = xi;
+				si.y = yf;
+				sf.y = yi;
+			}
+			// move to origin of text box
+			si.x += m_ref_xi;
+			sf.x += m_ref_xi;
+			si.y += m_ref_yi;
+			sf.y += m_ref_yi;
+			// rotate to angle
+			CPoint ref_org( m_ref_xi, m_ref_yi );
+			RotatePoint( &si, m_ref_angle, ref_org );
+			RotatePoint( &sf, m_ref_angle, ref_org );
+			// draw
+			mfDC->MoveTo( si.x/NM_PER_MIL+xoffset, -si.y/NM_PER_MIL+yoffset );
+			mfDC->LineTo( sf.x/NM_PER_MIL+xoffset, -sf.y/NM_PER_MIL+yoffset );
+		}
+		xc += (max_x - min_x + 8.0)*x_scale;
+	}
+
+	// draw text
+	for( int it=0; it<m_tl->text_ptr.GetSize(); it++ )
+	{
+		CText * t = m_tl->text_ptr[it];
+		int thickness = t->m_stroke_width/NM_PER_MIL;
+		CPen text_pen( PS_SOLID, thickness, C_RGB::yellow );
+		mfDC->SelectObject( &text_pen );
+		SMFontUtil * smfontutil = ((CFreePcbApp*)AfxGetApp())->m_Doc->m_smfontutil;
+		CString t_str = t->m_str;
+		x_scale = (double)t->m_font_size/22.0;
+		y_scale = (double)t->m_font_size/22.0;
+		double y_offset = 9.0*y_scale;
+		int i = 0;
+		double xc = 0.0;
+		CPoint si, sf;
+		for( int ic=0; ic<t_str.GetLength(); ic++ )
+		{
+			// get stroke info for character
+			int xi, yi, xf, yf;
+			double coord[64][4];
+			double min_x, min_y, max_x, max_y;
+			int nstrokes = smfontutil->GetCharStrokes( t_str[ic], SIMPLEX,
+				&min_x, &min_y, &max_x, &max_y, coord, 64 );
+			for( int is=0; is<nstrokes; is++ )
+			{
+				// draw each stroke
+				xi = (coord[is][0] - min_x)*x_scale + xc;
+				yi = coord[is][1]*y_scale + y_offset;
+				xf = (coord[is][2] - min_x)*x_scale + xc;
+				yf = coord[is][3]*y_scale + y_offset;
+				if( yi > yf )
+				{
+					si.x = xi;
+					sf.x = xf;
+					si.y = yi;
+					sf.y = yf;
+				}
+				else
+				{
+					si.x = xf;
+					sf.x = xi;
+					si.y = yf;
+					sf.y = yi;
+				}
+				// move to origin of text box
+				si.x += t->m_x;
+				sf.x += t->m_x;
+				si.y += t->m_y;
+				sf.y += t->m_y;
+				// rotate to angle
+				CPoint text_org( t->m_x, t->m_y );
+				RotatePoint( &si, t->m_angle, text_org );
+				RotatePoint( &sf, t->m_angle, text_org );
+				// draw
+				mfDC->MoveTo( si.x/NM_PER_MIL+xoffset, -si.y/NM_PER_MIL+yoffset );
+				mfDC->LineTo( sf.x/NM_PER_MIL+xoffset, -sf.y/NM_PER_MIL+yoffset );
+			}
+			xc += (max_x - min_x + 8.0)*x_scale;
+		}
+	}
+
+	// draw selection rectangle
+	if( bDrawSelectionRect )
+	{
+		CPen sel_pen( PS_SOLID, 1, C_RGB::white );
+		mfDC->SelectObject( &sel_pen );
+		mfDC->MoveTo( m_sel_xi/NM_PER_MIL+xoffset, -m_sel_yi/NM_PER_MIL+yoffset );
+		mfDC->LineTo( m_sel_xf/NM_PER_MIL+xoffset, -m_sel_yi/NM_PER_MIL+yoffset );
+		mfDC->LineTo( m_sel_xf/NM_PER_MIL+xoffset, -m_sel_yf/NM_PER_MIL+yoffset );
+		mfDC->LineTo( m_sel_xi/NM_PER_MIL+xoffset, -m_sel_yf/NM_PER_MIL+yoffset );
+		mfDC->LineTo( m_sel_xi/NM_PER_MIL+xoffset, -m_sel_yi/NM_PER_MIL+yoffset );
+		mfDC->SelectObject( old_pen );
+	}
+
+	// restore DC
+	mfDC->SelectObject( old_brush );
+	mfDC->SelectObject( old_pen );
+	HENHMETAFILE hMF = mfDC->CloseEnhanced();
+	return hMF;
+}
+
+#if 0
+// create metafile and draw footprint into it
+//
 HENHMETAFILE CShape::CreateMetafile( CMetaFileDC * mfDC, CDC * pDC, int x_size, int y_size )
 {
 	CFreePcbDoc * theDoc = ((CFreePcbApp*)AfxGetApp())->m_Doc;
@@ -2420,6 +2978,7 @@ HENHMETAFILE CShape::CreateMetafile( CMetaFileDC * mfDC, CDC * pDC, int x_size, 
 	HENHMETAFILE hMF = mfDC->CloseEnhanced();
 	return hMF;
 }
+#endif
 
 HENHMETAFILE CShape::CreateWarningMetafile( CMetaFileDC * mfDC, CDC * pDC, int x_size, int y_size )
 {
@@ -2713,7 +3272,7 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 				*pad_el = dlist->Add( p_id, NULL, pad_lay, 
 					gtype, 1, 
 					p->size_h,
-					0, 
+					0, 0, 
 					pin.x, pin.y, 0, 0, pin.x, pin.y );
 				sel_x = max( sel_x, p->size_h );
 				sel_y = max( sel_y, p->size_h );
@@ -2726,7 +3285,7 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 					*pad_el = dlist->Add( p_id, NULL, pad_lay, 
 						DL_SQUARE, 1, 
 						p->size_h,
-						0, 
+						0, 0, 
 						pin.x, pin.y, 
 						0, 0, 
 						pin.x, pin.y );
@@ -2734,7 +3293,7 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 				else
 				{
 					*pad_el = dlist->Add( p_id, NULL, pad_lay, 
-						DL_HOLLOW_RECT, 1, 1, 0,
+						DL_HOLLOW_RECT, 1, 1, 0, 0,
 						pin.x-p->size_h/2,  
 						pin.y-p->size_h/2, 
 						pin.x+p->size_h/2, 
@@ -2796,7 +3355,7 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 				*pad_el = dlist->Add( p_id, NULL, pad_lay, 
 					gtype, 1, 
 					p->size_h,
-					0, 
+					0, 0, 
 					pin.x, pin.y, 
 					0, 0, 
 					pin.x, pin.y );
@@ -2813,7 +3372,7 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 			m_hole_el[i] = dlist->Add( p_id, NULL, LAY_FP_PAD_THRU, 
 				DL_HOLE, 1, 
 				ps->hole_size,
-				0, 
+				0, 0,
 				pin.x, pin.y, 0, 0, pin.x, pin.y );
 			sel_x = max( sel_x, ps->hole_size );
 			sel_y = max( sel_y, ps->hole_size );
@@ -2881,7 +3440,7 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 	else if( m_centroid_angle == 270 )
 		axis_offset_y = -CENTROID_WIDTH;
 	m_centroid_el = m_dlist->Add( c_id, NULL, LAY_FP_CENTROID, DL_CENTROID, TRUE, 
-		CENTROID_WIDTH, 0, m_centroid_x, m_centroid_y, 
+		CENTROID_WIDTH, 0, 0, m_centroid_x, m_centroid_y, 
 		m_centroid_x+axis_offset_x, m_centroid_y + axis_offset_y, 
 		0, 0, 0 ); 
 	c_id.SetT2( ID_SEL_CENT ); 

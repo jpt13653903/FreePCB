@@ -372,7 +372,7 @@ void CFreePcbDoc::OnFileNew()
 		for( int i=0; i<m_num_layers; i++ )
 		{
 			m_vis[i] = 1;
-			m_dlist->SetLayerRGB( i, m_rgb[i][0], m_rgb[i][1], m_rgb[i][2] );
+			m_dlist->SetLayerRGB( i, C_RGB(m_rgb[i][0], m_rgb[i][1], m_rgb[i][2]) );
 		}
 
 		// force redraw of left pane
@@ -597,7 +597,7 @@ BOOL CFreePcbDoc::FileOpen( LPCTSTR fn, BOOL bLibrary )
 		// now set layer visibility
 		for( int i=0; i<m_num_layers; i++ )
 		{
-			m_dlist->SetLayerRGB( i, m_rgb[i][0], m_rgb[i][1], m_rgb[i][2] );
+			m_dlist->SetLayerRGB( i, C_RGB(m_rgb[i][0], m_rgb[i][1], m_rgb[i][2]) );
 			m_dlist->SetLayerVisible( i, m_vis[i] );
 		}
 		// force redraw of function key text
@@ -2267,7 +2267,7 @@ void CFreePcbDoc::InitializeNewProject()
 	for( int i=0; i<m_num_layers; i++ )
 	{
 		m_vis[i] = 1;
-		m_dlist->SetLayerRGB( i, m_rgb[i][0], m_rgb[i][1], m_rgb[i][2] );
+		m_dlist->SetLayerRGB( i, C_RGB(m_rgb[i][0], m_rgb[i][1], m_rgb[i][2]) );
 		m_dlist->SetLayerVisible( i, m_vis[i] );
 	}
 
@@ -2326,7 +2326,7 @@ void CFreePcbDoc::InitializeNewProject()
 	for( int i=0; i<m_fp_num_layers; i++ )
 	{
 		m_fp_vis[i] = 1;
-		m_dlist_fp->SetLayerRGB( i, m_fp_rgb[i][0], m_fp_rgb[i][1], m_fp_rgb[i][2] );
+		m_dlist_fp->SetLayerRGB( i, C_RGB(m_fp_rgb[i][0], m_fp_rgb[i][1], m_fp_rgb[i][2]) );
 		m_dlist_fp->SetLayerVisible( i, 1 );
 	}
 
@@ -2587,7 +2587,7 @@ void CFreePcbDoc::OnViewLayers()
 	{
 		for( int i=0; i<m_num_layers; i++ )
 		{
-			m_dlist->SetLayerRGB( i, m_rgb[i][0], m_rgb[i][1], m_rgb[i][2] );
+			m_dlist->SetLayerRGB( i, C_RGB(m_rgb[i][0], m_rgb[i][1], m_rgb[i][2]) );
 			m_dlist->SetLayerVisible( i, m_vis[i] );
 		}
 		view->m_left_pane_invalid = TRUE;	// force erase of left pane
