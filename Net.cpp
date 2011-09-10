@@ -364,7 +364,7 @@ void cconnect::Draw()
 			else if( s->curve == cseg::CCW )
 				shape = DL_CURVE_CCW;
  			s->dl_el = m_dlist->Add( s_id, m_net, s->layer, shape, v, 
-				s->width, 0, pre_v->x, pre_v->y, post_v->x, post_v->y,
+				s->width, 0, 0, pre_v->x, pre_v->y, post_v->x, post_v->y,
 				0, 0 );
 			s_id.SetT3( ID_SEL_SEG );
 			s->dl_sel = m_dlist->AddSelector( s_id, m_net, s->layer, DL_LINE, v, 
@@ -498,7 +498,7 @@ void cseg::Initialize( cconnect * c )
 // request assignment of uid if necessary
 void cseg::ReplaceUID( int uid )
 {
-	m_uid = pcb_cuid.PrepareToReplaceUID( m_uid, -1 );
+	m_uid = pcb_cuid.PrepareToReplaceUID( m_uid, uid );
 }
 
 // get index of this segment in cconnect
@@ -634,7 +634,7 @@ void cvertex::Initialize( cconnect * c )
 //
 void cvertex::ReplaceUID( int uid )
 {
-	m_uid = pcb_cuid.PrepareToReplaceUID( m_uid, -1 );
+	m_uid = pcb_cuid.PrepareToReplaceUID( m_uid, uid );
 }
 
 void cvertex::Undraw()
@@ -644,7 +644,6 @@ void cvertex::Undraw()
 		for( int i=0; i<dl_el.GetSize(); i++ )
 		{
 			m_dlist->Remove( dl_el[i] );
-//			v->dl_el[i] = NULL;
 		}
 		dl_el.RemoveAll();
 	}
@@ -653,6 +652,49 @@ void cvertex::Undraw()
 	dl_sel = NULL;
 	dl_hole = NULL;
 }
+
+// return type of vertex
+cvertex::Type cvertex::GetType()
+{
+	if( pad_layer != 0 )
+		return V_PIN;
+	else if( tee_ID > 0 )
+		return V_TEE;
+	else if( this == m_con->LastVtx() )
+		return V_END;
+	else if( this == m_con->FirstVtx() )
+		return V_END;
+	else
+		return V_ERR;
+}
+
+// if vertex is a pin, return it
+cpin * cvertex::NetPin()
+{
+	if( GetType() == V_PIN )
+	{
+		if( this == m_con->FirstVtx() )
+			return m_con->StartPin();
+		else if( this == m_con->LastVtx() )
+			return m_con->EndPin();
+	}
+	return NULL;
+}
+
+// if vertex is a pin, return index to it
+int cvertex::NetPinIndex()
+{
+	if( GetType() == V_PIN )
+	{
+		if( this == m_con->FirstVtx() )
+			return m_con->start_pin;
+		else if( this == m_con->LastVtx() )
+			return m_con->end_pin;
+	}
+	return NULL;
+}
+
+
 
 //***************************** carea implementation **********************
 
@@ -1012,6 +1054,18 @@ void cnet::RecreateConnectFromUndo( undo_con * un_con, undo_seg * un_seg, undo_v
 	}
 }
 
+// Split a connection into two connections sharing a tee-vertex
+void SplitConnectAtVertex( id con_id, id vtx_id )
+{
+}
+
+// Add a new connection from a vertex to a pin
+BOOL AddConnectionFromVertexToPin( id vtx_id, id pin_id )
+{
+	return FALSE;
+}
+
+
 // get pointer to area from UID
 carea * cnet::AreaByUID( int uid, int * index )
 {
@@ -1034,5 +1088,6 @@ carea * cnet::AreaByIndex( int ia )
 		return NULL;
 	return &area[ia];
 }
+
 
 

@@ -407,7 +407,7 @@ int CNetList::AddNetConnect( cnet * net, int p1, int p2 )
 	{
 		// draw graphic elements for segment
 		s->dl_el = m_dlist->Add( id, net, LAY_RAT_LINE, DL_LINE, 
-			net->visible, 0, 0, pi.x, pi.y, pf.x, pf.y, 0, 0 ); 
+			net->visible, 0, 0, 0, pi.x, pi.y, pf.x, pf.y, 0, 0 ); 
 		id.SetT3( ID_SEL_SEG );
 		s->dl_sel = m_dlist->AddSelector( id, net, LAY_RAT_LINE, DL_LINE,
 			net->visible, 0, 0, pi.x, pi.y, pf.x, pf.y, 0, 0 ); 
@@ -977,7 +977,7 @@ void CNetList::UnrouteSegmentWithoutMerge( cnet * net, int ic, int is )
 			m_dlist->Remove( c->seg[is].dl_el );
 			m_dlist->Remove( c->seg[is].dl_sel );
 			c->seg[is].dl_el = m_dlist->Add( seg_id, net, LAY_RAT_LINE, DL_LINE, 
-				net->visible, 1, 0, xi, yi, xf, yf, 0, 0 );
+				net->visible, 1, 0, 0, xi, yi, xf, yf, 0, 0 );
 			c->seg[is].dl_sel = m_dlist->AddSelector( sel_id, net, LAY_RAT_LINE, DL_LINE, 
 				net->visible, 1, 0, xi, yi, xf, yf, 0, 0 );
 		}
@@ -1257,7 +1257,7 @@ int CNetList::RouteSegment( cnet * net, int ic, int iseg, int layer, int width )
 		int yf = c->vtx[iseg+1].y;
 		id id( ID_NET, net->UID(), ID_CONNECT, c->UID(), ic, ID_SEG, s->UID(), iseg );
 		c->seg[iseg].dl_el = m_dlist->Add( id, net, layer, DL_LINE, 
-			1, width, 0, xi, yi, xf, yf, 0, 0 );
+			1, width, 0, 0, xi, yi, xf, yf, 0, 0 );
 		id.SetT3( ID_SEL_SEG );
 		c->seg[iseg].dl_sel = m_dlist->AddSelector( id, net, layer, DL_LINE, 
 			1, width, 0, xi, yi, xf, yf, 0, 0 ); 
@@ -3410,7 +3410,7 @@ void CNetList::SetAreaConnections( cnet * net, int iarea )
 						if( m_dlist )
 						{
 							dl_element * dl = m_dlist->Add( id, net, LAY_RAT_LINE, DL_X, net->visible,
-								2*w/3, 0, p.x, p.y, 0, 0, 0, 0 );
+								2*w/3, 0, 0, p.x, p.y, 0, 0, 0, 0 );
 							area->dl_thermal.SetAtGrow(area->npins, dl );
 						}
 						area->npins++;
@@ -3451,7 +3451,7 @@ void CNetList::SetAreaConnections( cnet * net, int iarea )
 					if( m_dlist )
 					{
 						dl_element * dl = m_dlist->Add( id, net, LAY_RAT_LINE, DL_X, net->visible,
-							2*w/3, 0, x, y, 0, 0, 0, 0 );
+							2*w/3, 0, 0, x, y, 0, 0, 0, 0 );
 						area->dl_via_thermal.SetAtGrow(area->nvias, dl );
 					}
 					area->nvias++;
@@ -4214,11 +4214,11 @@ int CNetList::DrawVia( cnet * net, int ic, int iv )
 		{
 			int layer = LAY_TOP_COPPER + il;
 			v->dl_el[il] = m_dlist->Add( vid, net, layer, DL_CIRC, 1, 
-				v->via_w, 0, 
+				v->via_w, 0, 0,
 				v->x, v->y, 0, 0, 0, 0 );
 		}
 		v->dl_hole = m_dlist->Add( vid, net, LAY_PAD_THRU, DL_HOLE, 1, 
-				v->via_hole_w, 0, 
+				v->via_hole_w, 0, 0,
 				v->x, v->y, 0, 0, 0, 0 );
 	}
 

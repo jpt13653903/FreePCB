@@ -87,16 +87,16 @@ int Cuid::GetNewUID()
 			int uid = (i<<5) + npos;
 #if 0
 			//** for debugging, break on certain uids
-			if(		uid == 12672
-				 || uid == 18688
-				 || uid == 27936
-				 || uid == 29632
-				 || uid == 70816
-				 || uid == 89184
-				 || uid == 133152
-				 || uid == 210624
-				 || uid == 221536
-				 || uid == 255872 )
+			if(		uid == 199808
+				 || uid == -1
+				 || uid == -1
+				 || uid == -1
+				 || uid == -1
+				 || uid == -1
+				 || uid == -1
+				 || uid == -1
+				 || uid == -1
+				 || uid == -1 )
 				 ASSERT(0);
 			//**
 #endif

@@ -249,6 +249,10 @@ public:
 	//DRC limits
 	DesignRules m_dr;
 
+	// Brian's stuff
+	int m_thermal_clearance;
+
+
 // Generated message map functions
 public:
 	//{{AFX_MSG(CFreePcbDoc)

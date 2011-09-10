@@ -18,8 +18,8 @@ DRError::~DRError()
 {
 	if( dl_el )
 	{
-		dl_el->dlist->Remove( dl_el );
-		dl_sel->dlist->Remove( dl_sel );
+		dl_el->get_dlist()->Remove( dl_el );
+		dl_sel->get_dlist()->Remove( dl_sel );
 	}
 }
 
@@ -234,7 +234,7 @@ DRError * DRErrorList::Add( long index, int type, CString * str,
 			d = max( d, w/2 );
 		int ww = 2*d;
 		dre->dl_el = m_dlist->Add( dre->m_id, (void*)dre, LAY_DRC_ERROR, 
-			DL_HOLLOW_CIRC, 1, ww, 0, x, y, 0, 0, x, y ); 
+			DL_HOLLOW_CIRC, 1, ww, 0, 0, x, y, 0, 0, x, y ); 
 		dre->m_id.SetT2( ID_SEL_DRE );
 		dre->dl_sel = m_dlist->AddSelector( dre->m_id, (void*)dre, LAY_DRC_ERROR, 
 			DL_HOLLOW_CIRC, 1, ww, 0, x, y, 0, 0, x, y ); 
@@ -264,7 +264,7 @@ void DRErrorList::HighLight( DRError * dre )
 {
 	m_dlist->Add( dre->m_id, dre, LAY_HILITE, dre->dl_el->gtype, 1,
 		m_dlist->Get_w( dre->dl_el ),
-		m_dlist->Get_holew( dre->dl_el ),
+		m_dlist->Get_holew( dre->dl_el ), 0,
 		m_dlist->Get_x( dre->dl_el ),
 		m_dlist->Get_y( dre->dl_el ),
 		m_dlist->Get_xf( dre->dl_el ),

@@ -139,7 +139,7 @@ void CText::Draw( CDisplayList * dlist, SMFontUtil * smfontutil )
 				if( dlist )
 				{
 					m_stroke[i].dl_el = dlist->Add( tid, this, 
-					m_layer, DL_LINE, 1, m_stroke_width, 0, 
+					m_layer, DL_LINE, 1, m_stroke_width, 0, 0,  
 					m_x+si.x, m_y+si.y, m_x+sf.x, m_y+sf.y, 0, 0 );
 				}
 				else

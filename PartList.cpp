@@ -1248,7 +1248,7 @@ int CPartList::DrawPart( cpart * part )
 			{
 				id.SetI3( is );
 				m_stroke[is].dl_el = m_dlist->Add( id, this, 
-					m_stroke[is].layer, DL_LINE, 1, m_stroke[is].w, 0, 
+					m_stroke[is].layer, DL_LINE, 1, m_stroke[is].w, 0, 0,
 					m_stroke[is].xi, m_stroke[is].yi, 
 					m_stroke[is].xf, m_stroke[is].yf, 0, 0 );
 				part->ref_text_stroke[is] = m_stroke[is];
@@ -1293,7 +1293,7 @@ int CPartList::DrawPart( cpart * part )
 			{
 				id.SetI3( is );
 				m_stroke[is].dl_el = m_dlist->Add( id, this, 
-					m_stroke[is].layer, DL_LINE, 1, m_stroke[is].w, 0, 
+					m_stroke[is].layer, DL_LINE, 1, m_stroke[is].w, 0, 0,
 					m_stroke[is].xi, m_stroke[is].yi, 
 					m_stroke[is].xf, m_stroke[is].yf, 0, 0 );
 				part->value_stroke[is] = m_stroke[is];
@@ -1370,7 +1370,7 @@ int CPartList::DrawPart( cpart * part )
 			part->m_outline_stroke[i+pos].type = g_type;
 			part->m_outline_stroke[i+pos].w = w;
 			part->m_outline_stroke[i+pos].dl_el = m_dlist->Add( part->m_id, part, poly_layer, 
-				g_type, 1, w, 0, x+si.x, y+si.y, x+sf.x, y+sf.y, 0, 0 );
+				g_type, 1, w, 0, 0, x+si.x, y+si.y, x+sf.x, y+sf.y, 0, 0 );
 		}
 	}
 
@@ -1414,7 +1414,7 @@ int CPartList::DrawPart( cpart * part )
 		{
 			id.SetI3( is );
 			m_stroke[is].dl_el = m_dlist->Add( id, this, 
-				text_layer, DL_LINE, 1, m_stroke[is].w, 0, 
+				text_layer, DL_LINE, 1, m_stroke[is].w, 0, 0,
 				m_stroke[is].xi, m_stroke[is].yi, 
 				m_stroke[is].xf, m_stroke[is].yf, 0, 0 );
 			part->m_outline_stroke.Add( m_stroke[is] );
@@ -1486,7 +1486,7 @@ int CPartList::DrawPart( cpart * part )
 					pad_el = m_dlist->Add( id, part, pad_layer, 
 						DL_CIRC, 1, 
 						p->size_h,
-						0, 
+						0, 0,
 						x + pin_pt.x, y + pin_pt.y, 0, 0, 0, 0 );
 					if( !pin->dl_sel )
 					{
@@ -1517,7 +1517,7 @@ int CPartList::DrawPart( cpart * part )
 					pad_el = m_dlist->Add( part->m_id, part, pad_layer, 
 						DL_SQUARE, 1, 
 						p->size_h,
-						0, 
+						0, 0,
 						pin->x, pin->y, 
 						0, 0, 
 						0, 0 );
@@ -1577,7 +1577,7 @@ int CPartList::DrawPart( cpart * part )
 					pad_el = m_dlist->Add( part->m_id, part, pad_layer, 
 						gtype, 1, 
 						0,
-						0, 
+						0, 0, 
 						x + pad_pi.x, y + pad_pi.y, 
 						x + pad_pf.x, y + pad_pf.y, 
 						x + pin_pt.x, y + pin_pt.y, 
@@ -1610,7 +1610,7 @@ int CPartList::DrawPart( cpart * part )
 					pad_el = m_dlist->Add( part->m_id, part, pad_layer, 
 						DL_OCTAGON, 1, 
 						p->size_h,
-						0, 
+						0, 0,
 						pin->x, pin->y, 
 						0, 0, 
 						0, 0 );
@@ -1651,7 +1651,7 @@ int CPartList::DrawPart( cpart * part )
 			pin->dl_hole = m_dlist->Add( id, part, LAY_PAD_THRU, 
 								DL_HOLE, 1, 
 								ps->hole_size,
-								0, 
+								0, 0,
 								pin->x, pin->y, 0, 0, 0, 0 );  
 			if( !pin->dl_sel )
 			{

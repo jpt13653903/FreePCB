@@ -117,29 +117,33 @@ public:
 class cvertex
 {
 public:
-	enum Type { V_PIN, V_TRACE, V_END };	// types of vertices
+	// types of vertices
+	enum Type { 
+		V_ERR,		// unknown
+		V_PIN,		// part pin 
+		V_TRACE,	// junction between trace segments
+		V_TEE,		// junction between connected traces
+		V_END		// end of stub trace
+	};	
 
 	cvertex();
 	cvertex( cvertex& src );
 	~cvertex();
 	cvertex &operator=( const cvertex &v ); // assignment	
-	cvertex &operator=( cvertex &v );	
+	cvertex &operator=( cvertex &v );		// assignment
 	void Initialize( cconnect * c );
 	int UID(){ return m_uid; };
 	void ReplaceUID( int uid );
 	void Undraw();
 	Type GetType();
-	cpin& Pin();	
+	cpin * NetPin();
+	int NetPinIndex();
 
 	int m_uid;					// unique id
-	Type m_type;				// type of vertex
-	int m_pin_uid;				// if type == V_PIN, UID of pin in net
 	int x, y;					// coords
 	int pad_layer;				// layer of pad if this is first or last vertex, otherwise 0
 	int force_via_flag;			// force a via even if no layer change
 	int via_w, via_hole_w;		// via width and hole width (via_w==0 means no via)
-//	BOOL m_bDrawingEnabled;		// TRUE if may be drawn
-//	BOOL m_bDrawn;				// TRUE if drawn into CDisplayList
 	CArray<dl_element*> dl_el;	// array of display elements for each layer
 	dl_element * dl_sel;		// selection box
 	dl_element * dl_hole;		// hole in via
@@ -267,7 +271,10 @@ public:
 	// connections
 	cconnect * AddNewConnect();
 	void RemoveConnect( cconnect * c );
+	void SplitConnectAtVertex( id con_id, id vtx_id );
 	void RecreateConnectFromUndo( undo_con * con, undo_seg * seg, undo_vtx * vtx );
+	// both
+	BOOL AddConnectionFromVertexToPin( id vtx_id, id pin_id );
 
 // member variables
 	id id;				// net id
