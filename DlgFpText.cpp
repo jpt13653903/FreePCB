@@ -24,34 +24,6 @@ CDlgFpText::~CDlgFpText()
 {
 }
 
-int CDlgFpText::Layer2LayerIndex( int layer)
-{
-	int li;
-	switch( layer ) 
-	{
-	case LAY_FP_SILK_TOP: li = 0; break;
-	case LAY_FP_SILK_BOTTOM: li = 1; break;
-	case LAY_FP_TOP_COPPER: li = 2; break;
-	case LAY_FP_BOTTOM_COPPER: li = 3; break;
-	default: ASSERT(0); return -1;
-	}
-	return li;
-}
-
-int CDlgFpText::LayerIndex2Layer( int layer_index )
-{
-	int layer;
-	switch( layer_index ) 
-	{
-	case 0: layer = LAY_FP_SILK_TOP; break;
-	case 1: layer = LAY_FP_SILK_BOTTOM; break;
-	case 2: layer = LAY_FP_TOP_COPPER; break;
-	case 3: layer = LAY_FP_BOTTOM_COPPER; break;
-	default: ASSERT(0); return -1;
-	}
-	return layer;
-}
-
 void CDlgFpText::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
@@ -67,26 +39,24 @@ void CDlgFpText::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_RADIO1, m_button_drag);
 	DDX_Control(pDX, IDC_RADIO2, m_button_set_position );
 	DDX_Control(pDX, IDC_COMBO_ADD_TEXT_UNITS, m_combo_units);
-	DDX_Control(pDX, IDC_COMBO_FP_TEXT_LAYER, m_combo_layer);
 	if( pDX->m_bSaveAndValidate )
 	{
 		// leaving the dialog
 		if( m_str == "" )
 		{
-			CString s ((LPCSTR) IDS_InvalidTextString);
-			AfxMessageBox( s );
+			AfxMessageBox( "Invalid text string" );
 			pDX->Fail();
 		}
 		if( m_str.Find( '\"' ) != -1 )
 		{
-			CString s ((LPCSTR) IDS_TextStringCantContainQuote);
-			AfxMessageBox( s );
+			AfxMessageBox( "Text string can't contain \"" );
 			pDX->Fail();
 		}
 		GetFields();
+		int ia = m_list_angle.GetCurSel();
+		m_angle = ia*90;
 		if( m_bNewText )
 		{
-			// remember values to be defaults for next time
 			gFpLastHeight = m_height;
 			gFpLastWidth = m_width;
 			gFpUseDefaultWidth = m_button_def_width.GetCheck();
@@ -108,7 +78,7 @@ END_MESSAGE_MAP()
 // Initialize dialog
 //
 void CDlgFpText::Initialize( BOOL bDrag, BOOL bFixedString, 
-		CString * str, int layer, int units, 
+		CString * str, int units, 
 		int angle, int height, int width, int x, int y )
 
 {
@@ -125,7 +95,6 @@ void CDlgFpText::Initialize( BOOL bDrag, BOOL bFixedString,
 	m_width = width;
 	m_x = x;
 	m_y = y;
-	m_layer = layer;
 }
 
 // CDlgFpText message handlers
@@ -133,13 +102,6 @@ void CDlgFpText::Initialize( BOOL bDrag, BOOL bFixedString,
 BOOL CDlgFpText::OnInitDialog()
 {
 	CDialog::OnInitDialog();
-
-	// layers
-	m_combo_layer.InsertString( 0, "TOP SILK" );
-	m_combo_layer.InsertString( 1, "BOTTOM SILK" );
-	m_combo_layer.InsertString( 2, "TOP COPPER" );
-	m_combo_layer.InsertString( 3, "BOTTOM COPPER" );
-	m_combo_layer.SetCurSel( Layer2LayerIndex( m_layer ) );
 
 	// units
 	m_combo_units.InsertString(	0, "MIL" );
@@ -201,11 +163,6 @@ BOOL CDlgFpText::OnInitDialog()
 	if( m_bFixedString )
 		m_text.EnableWindow( FALSE );
 	SetFields();
-	if( m_bFixedString )
-	{
-		CString title = m_str + " String";
-		this->SetWindowTextA( title );
-	}
 	return TRUE;  // return TRUE unless you set the focus to a control
 }
 
@@ -299,8 +256,6 @@ void CDlgFpText::GetFields()
 	m_x = atof( str ) * mult;
 	m_edit_y.GetWindowText( str );
 	m_y = atof( str ) * mult;
-	m_angle = 90*m_list_angle.GetCurSel();
-	m_layer = LayerIndex2Layer( m_combo_layer.GetCurSel() );
 }
 
 void CDlgFpText::SetFields()
@@ -319,8 +274,6 @@ void CDlgFpText::SetFields()
 	m_edit_x.SetWindowText( str );
 	MakeCStringFromDouble( &str, m_y/mult );
 	m_edit_y.SetWindowText( str );
-	m_list_angle.SetCurSel( m_angle/90 );
-	m_combo_layer.SetCurSel( Layer2LayerIndex( m_layer ) );
 }
 
 

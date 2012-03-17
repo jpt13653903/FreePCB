@@ -35,22 +35,11 @@ class CPolyPt
 {
 public:
 	CPolyPt( int qx=0, int qy=0, BOOL qf=FALSE )
-	{ 
-		x=qx; 
-		y=qy; 
-		end_contour=qf; 
-		utility = 0; 
-		m_uid = pcb_cuid.GetNewUID();
-	};
-	~CPolyPt()
-	{
-		pcb_cuid.ReleaseUID( m_uid );
-	};
+	{ x=qx; y=qy; end_contour=qf; utility = 0; };
 	int x;
 	int y;
-	BOOL end_contour;	// flags the end of a closed contour
+	BOOL end_contour;
 	int utility;
-	int m_uid;
 };
 
 class CPolyLine
@@ -71,7 +60,7 @@ public:
 	void AppendCorner( int x, int y, int style = STRAIGHT, BOOL bDraw=TRUE );
 	void InsertCorner( int ic, int x, int y );
 	void DeleteCorner( int ic, BOOL bDraw=TRUE );
-	BOOL MoveCorner( int ic, int x, int y, BOOL bEnforceCircularArcs=FALSE );
+	void MoveCorner( int ic, int x, int y );
 	void Close( int style = STRAIGHT, BOOL bDraw=TRUE );
 	void RemoveContour( int icont );
 
@@ -122,7 +111,6 @@ public:
 	int GetSelBoxSize();
 	CDisplayList * GetDisplayList(){ return m_dlist; };
 	int GetHatch(){ return m_hatch; }
-	void SetClosed( BOOL bClosed ){ corner[m_ncorners-1].end_contour = bClosed; };
 	void SetX( int ic, int x );
 	void SetY( int ic, int y );
 	void SetEndContour( int ic, BOOL end_contour );
@@ -157,7 +145,6 @@ public:
 private:
 	CDisplayList * m_dlist;		// display list 
 	id m_id;		// root id
-	int m_uid;
 	void * m_ptr;	// pointer to parent object (or NULL)
 	int m_layer;	// layer to draw on
 	int m_w;		// line width

@@ -90,13 +90,11 @@ void CShape::Clear()
 	m_units = MIL;
 	m_sel_xi = m_sel_yi = 0;
 	m_sel_xf = m_sel_yf = 500*NM_PER_MIL;
-	m_ref_layer = LAY_FP_SILK_TOP;
 	m_ref_size = 100*NM_PER_MIL;
 	m_ref_xi = 100*NM_PER_MIL;
 	m_ref_yi = 200*NM_PER_MIL;
 	m_ref_angle = 0;
 	m_ref_w = 10*NM_PER_MIL;
-	m_value_layer = LAY_FP_SILK_TOP;
 	m_value_size = 100*NM_PER_MIL;		
 	m_value_xi = 100*NM_PER_MIL;
 	m_value_yi = 0;
@@ -1158,8 +1156,9 @@ int CShape::MakeFromFile( CStdioFile * in_file, CString name,
 		}
 		if( p[0].GetLength() > MAX_NAME_SIZE )
 		{
-			CString mess, s ((LPCSTR) IDS_FootprintNameTooLong);
-			mess.Format( s, p[0], p[0].Left(MAX_NAME_SIZE) );
+			CString mess;
+			mess.Format( "Footprint name \"%s\" too long\nTruncated to \"%s\"",
+				p[0], p[0].Left(MAX_NAME_SIZE) );
 			AfxMessageBox( mess );
 		}
 		m_name = p[0].Left(MAX_NAME_SIZE);
@@ -1250,10 +1249,6 @@ int CShape::MakeFromFile( CStdioFile * in_file, CString name,
 				m_ref_yi = GetDimensionFromString( &p[2], m_units);
 				m_ref_angle = my_atoi( &p[3] ); 
 				m_ref_w = GetDimensionFromString( &p[4], m_units);
-				if( np >= 7 )
-					m_ref_layer = my_atoi( &p[5] );
-				if( m_ref_layer < 4 )
-					m_ref_layer = 4;
 				bRef = TRUE;
 			}
 			else if( key_str == "value_text" && np >= 6 )
@@ -1263,10 +1258,6 @@ int CShape::MakeFromFile( CStdioFile * in_file, CString name,
 				m_value_yi = GetDimensionFromString( &p[2], m_units);
 				m_value_angle = my_atoi( &p[3] ); 
 				m_value_w = GetDimensionFromString( &p[4], m_units);
-				if( np >= 7 )
-					m_value_layer = my_atoi( &p[5] );
-				if( m_value_layer < 4 )
-					m_value_layer = 4;
 				bValue = TRUE;
 			}
 			else if( key_str == "centroid" && np >= 4 )
@@ -1310,17 +1301,12 @@ int CShape::MakeFromFile( CStdioFile * in_file, CString name,
 			else if( (key_str == "outline_polygon" || key_str == "outline_polyline")
 				&& np >= 4 )
 			{
-				int poly_layer = LAY_FP_SILK_TOP;
 				int w = GetDimensionFromString( &p[0], m_units);
 				int x = GetDimensionFromString( &p[1], m_units);
 				int y = GetDimensionFromString( &p[2], m_units);
-				if( np >= 5 )
-					poly_layer = my_atoi( &p[3] );
-				if( poly_layer < LAY_FP_SILK_TOP )
-					poly_layer = LAY_FP_SILK_TOP;
 				int npolys = m_outline_poly.GetSize();
 				m_outline_poly.SetSize(npolys+1);
-				m_outline_poly[npolys].Start( poly_layer, w, 0, x, y, 0, NULL, NULL );
+				m_outline_poly[npolys].Start( 0, w, 0, x, y, 0, NULL, NULL );
 			}
 			else if( key_str == "next_corner" && np >= 3 )
 			{
@@ -1351,8 +1337,8 @@ int CShape::MakeFromFile( CStdioFile * in_file, CString name,
 				if( pin_name.GetLength() > MAX_PIN_NAME_SIZE )
 				{
 					CString mess;
-					CString s ((LPCSTR) IDS_FootprintPinNameTooLong);
-					mess.Format( s, m_name, pin_name, pin_name.Left(MAX_PIN_NAME_SIZE) );
+					mess.Format( "Footprint \"%s\": pin name \"%s\" too long\nTruncated to \"%s\"",
+						m_name, pin_name, pin_name.Left(MAX_PIN_NAME_SIZE) );
 					AfxMessageBox( mess );
 					pin_name = pin_name.Left(MAX_PIN_NAME_SIZE);
 				}
@@ -1556,14 +1542,12 @@ int CShape::Copy( CShape * shape )
 	m_sel_xf = shape->m_sel_xf;
 	m_sel_yf = shape->m_sel_yf;
 	// reference designator text
-	m_ref_layer = shape->m_ref_layer;
 	m_ref_size = shape->m_ref_size;
 	m_ref_w = shape->m_ref_w;
 	m_ref_xi = shape->m_ref_xi;
 	m_ref_yi = shape->m_ref_yi;
 	m_ref_angle = shape->m_ref_angle;
 	// value text
-	m_value_layer = shape->m_value_layer;
 	m_value_size = shape->m_value_size;
 	m_value_w = shape->m_value_w;
 	m_value_xi = shape->m_value_xi;
@@ -1592,7 +1576,7 @@ int CShape::Copy( CShape * shape )
 	{
 		CText * t = shape->m_tl->text_ptr[it];
 		m_tl->AddText( t->m_x, t->m_y, t->m_angle, t->m_mirror, t->m_bNegative, 
-			t->m_layer, t->m_font_size, t->m_stroke_width, &t->m_str, FALSE ); 
+			LAY_FP_SILK_TOP, t->m_font_size, t->m_stroke_width, &t->m_str, FALSE ); 
 	}
 	// glue spots
 	int nd = shape->m_glue.GetSize();
@@ -1618,14 +1602,11 @@ BOOL CShape::Compare( CShape * shape )
 		|| m_ref_xi != shape->m_ref_xi 
 		|| m_ref_yi != shape->m_ref_yi 
 		|| m_ref_angle != shape->m_ref_angle 
-		|| m_ref_layer != shape->m_ref_layer 
 		|| m_value_size != shape->m_value_size 
 		|| m_value_w != shape->m_value_w 
 		|| m_value_xi != shape->m_value_xi 
 		|| m_value_yi != shape->m_value_yi 
-		|| m_value_angle != shape->m_value_angle 
-		|| m_value_layer != shape->m_value_layer 
-		)
+		|| m_value_angle != shape->m_value_angle )
 			return FALSE;
 
 	// padstacks
@@ -1737,14 +1718,11 @@ int CShape::WriteFootprint( CStdioFile * file )
 		line.Format( "  sel_rect: %s %s %s %s\n", 
 			ws(m_sel_xi,m_units), ws(m_sel_yi,m_units), ws(m_sel_xf,m_units), ws(m_sel_yf,m_units) );
 		file->WriteString( line );
-		int layer_index = 0;
-		line.Format( "  ref_text: %s %s %s %d %s %d\n", 
-			ws(m_ref_size,m_units), ws(m_ref_xi,m_units), ws(m_ref_yi,m_units), m_ref_angle, 
-			ws(m_ref_w,m_units), m_ref_layer );
+		line.Format( "  ref_text: %s %s %s %d %s\n", 
+			ws(m_ref_size,m_units), ws(m_ref_xi,m_units), ws(m_ref_yi,m_units), m_ref_angle, ws(m_ref_w,m_units) );
 		file->WriteString( line );
-		line.Format( "  value_text: %s %s %s %d %s %d\n", 
-			ws(m_value_size,m_units), ws(m_value_xi,m_units), ws(m_value_yi,m_units), m_value_angle, 
-			ws(m_value_w,m_units), m_value_layer );
+		line.Format( "  value_text: %s %s %s %d %s\n", 
+			ws(m_value_size,m_units), ws(m_value_xi,m_units), ws(m_value_yi,m_units), m_value_angle, ws(m_value_w,m_units) );
 		file->WriteString( line );
 		line.Format( "  centroid: %d %s %s %d\n", 
 			m_centroid_type, ws(m_centroid_x,m_units), ws(m_centroid_y,m_units), m_centroid_angle );
@@ -1765,9 +1743,8 @@ int CShape::WriteFootprint( CStdioFile * file )
 		}
 		for( int ip=0; ip<m_outline_poly.GetSize(); ip++ )
 		{
-			line.Format( "  outline_polyline: %s %s %s %d\n", ws(m_outline_poly[ip].GetW(),m_units),
-				ws(m_outline_poly[ip].GetX(0),m_units), ws(m_outline_poly[ip].GetY(0),m_units),
-				m_outline_poly[ip].GetLayer() );
+			line.Format( "  outline_polyline: %s %s %s\n", ws(m_outline_poly[ip].GetW(),m_units),
+				ws(m_outline_poly[ip].GetX(0),m_units), ws(m_outline_poly[ip].GetY(0),m_units) );
 			file->WriteString( line );
 			int nc = m_outline_poly[ip].GetNumCorners();
 			for( int ic=1; ic<nc; ic++ )
@@ -1798,8 +1775,7 @@ int CShape::WriteFootprint( CStdioFile * file )
 				|| (p->bottom_mask.shape < PAD_DEFAULT && p->bottom_mask.shape > PAD_OCTAGON)
 				|| (p->bottom_paste.shape < PAD_DEFAULT && p->bottom_paste.shape > PAD_OCTAGON) )
 			{
-				CString s ((LPCSTR) IDS_ErrorTryingToWriteBadPadShapeInFootprint);
-				AfxMessageBox( s );
+				AfxMessageBox( "Error: Trying to write bad pad shape in footprint" );
 			}
 			//** end
 			if( p->hole_size || p->top.shape != PAD_NONE )
@@ -1867,11 +1843,11 @@ int CShape::WriteFootprint( CStdioFile * file )
 	}
 	catch( CFileException * e )
 	{
-		CString str, s ((LPCSTR) IDS_FileError1), s2 = ((LPCSTR) IDS_FileError2);
+		CString str;
 		if( e->m_lOsError == -1 )
-			str.Format( s, e->m_cause );
+			str.Format( "File error: %d\n", e->m_cause );
 		else
-			str.Format( s2, e->m_cause, e->m_lOsError,
+			str.Format( "File error: %d %ld (%s)\n", e->m_cause, e->m_lOsError,
 			_sys_errlist[e->m_lOsError] );
 		return 1;
 	}
@@ -1882,9 +1858,6 @@ int CShape::WriteFootprint( CStdioFile * file )
 //
 HENHMETAFILE CShape::CreateMetafile( CMetaFileDC * mfDC, CDC * pDC, int x_size, int y_size )
 {
-	CFreePcbDoc * theDoc = ((CFreePcbApp*)AfxGetApp())->m_Doc;
-	CDisplayList * dlist_fp = theDoc->m_dlist_fp;
-
 	// get bounds of shape
 	int x_min = INT_MAX;
 	int x_max = INT_MIN;
@@ -1951,7 +1924,7 @@ HENHMETAFILE CShape::CreateMetafile( CMetaFileDC * mfDC, CDC * pDC, int x_size, 
 	{
 		CText * t = m_tl->text_ptr[it];
 		int thickness = t->m_stroke_width/NM_PER_MIL;
-		SMFontUtil * smfontutil = theDoc->m_smfontutil;
+		SMFontUtil * smfontutil = ((CFreePcbApp*)AfxGetApp())->m_Doc->m_smfontutil;
 		CString t_str = t->m_str;
 		double x_scale = (double)t->m_font_size/22.0;
 		double y_scale = (double)t->m_font_size/22.0;
@@ -2011,11 +1984,6 @@ HENHMETAFILE CShape::CreateMetafile( CMetaFileDC * mfDC, CDC * pDC, int x_size, 
 	x_max = max( x_max, m_ref_xi+3*m_ref_size );
 	y_min = min( y_min, m_ref_yi );
 	y_max = max( y_max, m_ref_yi+m_ref_size );
-	// get bounds of value
-	x_min = min( x_min, m_value_xi );
-	x_max = max( x_max, m_value_xi+3*m_value_size );
-	y_min = min( y_min, m_value_yi );
-	y_max = max( y_max, m_value_yi+m_value_size );
 
 	// convert to mils
 	x_min = x_min/NM_PER_MIL;
@@ -2065,14 +2033,14 @@ HENHMETAFILE CShape::CreateMetafile( CMetaFileDC * mfDC, CDC * pDC, int x_size, 
 	// flip Y since metafile likes top < bottom
 	CPen * old_pen;
 	CBrush * old_brush;
-	CPen backgnd_pen( PS_SOLID, 1, dlist_fp->GetLayerColor(LAY_FP_BACKGND) );
-	CBrush backgnd_brush( dlist_fp->GetLayerColor(LAY_FP_BACKGND) );
-	CPen SMT_pad_pen( PS_SOLID, 1, dlist_fp->GetLayerColor(LAY_FP_TOP_COPPER) );
-	CBrush SMT_pad_brush( dlist_fp->GetLayerColor(LAY_FP_TOP_COPPER) );
-	CPen SMT_B_pad_pen( PS_SOLID, 1, dlist_fp->GetLayerColor(LAY_FP_BOTTOM_COPPER) );
-	CBrush SMT_B_pad_brush( dlist_fp->GetLayerColor(LAY_FP_BOTTOM_COPPER) );
-	CPen TH_pad_pen( PS_SOLID, 1, dlist_fp->GetLayerColor(LAY_FP_PAD_THRU) );
-	CBrush TH_pad_brush( dlist_fp->GetLayerColor(LAY_FP_PAD_THRU) );
+	CPen backgnd_pen( PS_SOLID, 1, RGB(0,0,0) );
+	CBrush backgnd_brush( RGB(0,0,0) );
+	CPen SMT_pad_pen( PS_SOLID, 1, RGB(0,255,0) );
+	CBrush SMT_pad_brush( RGB(0,255,0) );
+	CPen SMT_B_pad_pen( PS_SOLID, 1, RGB(255,0,0) );
+	CBrush SMT_B_pad_brush( RGB(255,0,0) );
+	CPen TH_pad_pen( PS_SOLID, 1, RGB(0,0,255) );
+	CBrush TH_pad_brush( RGB(0,0,255) );
 
 	// draw background
 	old_pen = mfDC->SelectObject( &backgnd_pen );
@@ -2262,7 +2230,7 @@ HENHMETAFILE CShape::CreateMetafile( CMetaFileDC * mfDC, CDC * pDC, int x_size, 
 	{
 		CPolyLine * p = &m_outline_poly[ip];
 		int thickness = p->GetW()/NM_PER_MIL;
-		CPen silk_pen( PS_SOLID, thickness, dlist_fp->GetLayerColor( p->GetLayer() ) );
+		CPen silk_pen( PS_SOLID, thickness, RGB(255,255,0) );
 		mfDC->SelectObject( &silk_pen );
 		int x = p->GetX(0)/NM_PER_MIL;
 		int y = p->GetY(0)/NM_PER_MIL;
@@ -2303,67 +2271,85 @@ HENHMETAFILE CShape::CreateMetafile( CMetaFileDC * mfDC, CDC * pDC, int x_size, 
 		}
 	}
 
-	// draw ref and value placeholders
-	int num_strings = 2 + m_tl->GetNumTexts();
-	for( int i_str=0; i_str<num_strings; i_str++ )
+	// draw ref text placeholder
+	int thickness = m_ref_w/NM_PER_MIL;
+	CPen ref_pen( PS_SOLID, thickness, RGB(255,255,0) );
+	mfDC->SelectObject( &ref_pen );
+	SMFontUtil * smfontutil = ((CFreePcbApp*)AfxGetApp())->m_Doc->m_smfontutil;
+	CString ref = "REF";
+	x_scale = (double)m_ref_size/22.0;
+	y_scale = (double)m_ref_size/22.0;
+	double y_offset = 9.0*y_scale;
+	int i = 0;
+	double xc = 0.0;
+	CPoint si, sf;
+	for( int ic=0; ic<ref.GetLength(); ic++ )
 	{
-		int this_thickness;
-		int this_size;
-		COLORREF this_color;
-		CString this_str;
-		int this_xi;
-		int this_yi;
-		int this_angle;
+		// get stroke info for character
+		int xi, yi, xf, yf;
+		double coord[64][4];
+		double min_x, min_y, max_x, max_y;
+		int nstrokes = smfontutil->GetCharStrokes( ref[ic], SIMPLEX, 
+			&min_x, &min_y, &max_x, &max_y, coord, 64 );
+		for( int is=0; is<nstrokes; is++ )
+		{
+			// draw each stroke
+			xi = (coord[is][0] - min_x)*x_scale + xc;
+			yi = coord[is][1]*y_scale + y_offset;
+			xf = (coord[is][2] - min_x)*x_scale + xc;
+			yf = coord[is][3]*y_scale + y_offset;
+			if( yi > yf )
+			{
+				si.x = xi;
+				sf.x = xf;
+				si.y = yi;
+				sf.y = yf;
+			}
+			else
+			{
+				si.x = xf;
+				sf.x = xi;
+				si.y = yf;
+				sf.y = yi;
+			}
+			// move to origin of text box
+			si.x += m_ref_xi;
+			sf.x += m_ref_xi;
+			si.y += m_ref_yi;
+			sf.y += m_ref_yi;
+			// rotate to angle 
+			CPoint ref_org( m_ref_xi, m_ref_yi );
+			RotatePoint( &si, m_ref_angle, ref_org );
+			RotatePoint( &sf, m_ref_angle, ref_org );
+			// draw
+			mfDC->MoveTo( si.x/NM_PER_MIL+xoffset, -si.y/NM_PER_MIL+yoffset );
+			mfDC->LineTo( sf.x/NM_PER_MIL+xoffset, -sf.y/NM_PER_MIL+yoffset );
+		}
+		xc += (max_x - min_x + 8.0)*x_scale;
+	}
 
-		if( i_str == 0 )
-		{
-			this_thickness = m_ref_w/NM_PER_MIL;
-			this_size = m_ref_size;
-			this_color = dlist_fp->GetLayerColor( m_ref_layer );
-			this_str = "REF";
-			this_xi = m_ref_xi;
-			this_yi = m_ref_yi;
-			this_angle = m_ref_angle;
-		}
-		else if( i_str == 1 )
-		{
-			this_thickness = m_value_w/NM_PER_MIL;
-			this_size = m_value_size;
-			this_color = dlist_fp->GetLayerColor( m_value_layer );
-			this_str = "VALUE";
-			this_xi = m_value_xi;
-			this_yi = m_value_yi;
-			this_angle = m_value_angle;
-		}
-		else
-		{
-			int it = i_str - 2;
-			CText * t = m_tl->text_ptr[it];
-			this_thickness = t->m_stroke_width/NM_PER_MIL;
-			this_size = t->m_font_size;
-			this_color = dlist_fp->GetLayerColor( t->m_layer );
-			this_str = t->m_str;
-			this_xi = t->m_x;
-			this_yi = t->m_y;
-			this_angle = t->m_angle;
-		}
-
-		CPen this_pen( PS_SOLID, this_thickness, this_color );
-		mfDC->SelectObject( &this_pen );
+	// draw text
+	for( int it=0; it<m_tl->text_ptr.GetSize(); it++ )
+	{
+		CText * t = m_tl->text_ptr[it];
+		int thickness = t->m_stroke_width/NM_PER_MIL;
+		CPen text_pen( PS_SOLID, thickness, RGB(255,255,0) );
+		mfDC->SelectObject( &text_pen );
 		SMFontUtil * smfontutil = ((CFreePcbApp*)AfxGetApp())->m_Doc->m_smfontutil;
-		x_scale = (double)this_size/22.0;
-		y_scale = (double)this_size/22.0;
+		CString t_str = t->m_str;
+		x_scale = (double)t->m_font_size/22.0;
+		y_scale = (double)t->m_font_size/22.0;
 		double y_offset = 9.0*y_scale;
 		int i = 0;
 		double xc = 0.0;
 		CPoint si, sf;
-		for( int ic=0; ic<this_str.GetLength(); ic++ )
+		for( int ic=0; ic<t_str.GetLength(); ic++ )
 		{
 			// get stroke info for character
 			int xi, yi, xf, yf;
 			double coord[64][4];
 			double min_x, min_y, max_x, max_y;
-			int nstrokes = smfontutil->GetCharStrokes( this_str[ic], SIMPLEX, 
+			int nstrokes = smfontutil->GetCharStrokes( t_str[ic], SIMPLEX, 
 				&min_x, &min_y, &max_x, &max_y, coord, 64 );
 			for( int is=0; is<nstrokes; is++ )
 			{
@@ -2387,14 +2373,14 @@ HENHMETAFILE CShape::CreateMetafile( CMetaFileDC * mfDC, CDC * pDC, int x_size, 
 					sf.y = yi;
 				}
 				// move to origin of text box
-				si.x += this_xi;
-				sf.x += this_xi;
-				si.y += this_yi;
-				sf.y += this_yi;
+				si.x += t->m_x;
+				sf.x += t->m_x;
+				si.y += t->m_y;
+				sf.y += t->m_y;
 				// rotate to angle 
-				CPoint this_org( this_xi, this_yi );
-				RotatePoint( &si, this_angle, this_org );
-				RotatePoint( &sf, this_angle, this_org );
+				CPoint text_org( t->m_x, t->m_y );
+				RotatePoint( &si, t->m_angle, text_org );
+				RotatePoint( &sf, t->m_angle, text_org );
 				// draw
 				mfDC->MoveTo( si.x/NM_PER_MIL+xoffset, -si.y/NM_PER_MIL+yoffset );
 				mfDC->LineTo( sf.x/NM_PER_MIL+xoffset, -sf.y/NM_PER_MIL+yoffset );
@@ -2404,7 +2390,7 @@ HENHMETAFILE CShape::CreateMetafile( CMetaFileDC * mfDC, CDC * pDC, int x_size, 
 	}
 
 	// draw selection rectangle
-	CPen sel_pen( PS_SOLID, 1, dlist_fp->GetLayerColor( LAY_FP_SELECTION ) );
+	CPen sel_pen( PS_SOLID, 1, RGB(255,255,255) );
 	mfDC->SelectObject( &sel_pen );
 	mfDC->MoveTo( m_sel_xi/NM_PER_MIL+xoffset, -m_sel_yi/NM_PER_MIL+yoffset );
 	mfDC->LineTo( m_sel_xf/NM_PER_MIL+xoffset, -m_sel_yi/NM_PER_MIL+yoffset );
@@ -2831,26 +2817,162 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 	}
 
 	// draw ref designator text
-	id rid( ID_PART, ID_REF_TXT );
-	BOOL bMirror = (m_ref_layer == LAY_FP_SILK_BOTTOM || m_ref_layer == LAY_FP_BOTTOM_COPPER) ;
-	CString r_str( "REF" );
-	m_ref_text.Init( m_dlist, rid, m_ref_xi, m_ref_yi, m_ref_angle,
-			bMirror, FALSE, m_ref_layer, m_ref_size, m_ref_w,
-			fontutil, &r_str );
+	int silk_lay = LAY_FP_SILK_TOP;
+	int nstrokes = 0;
+	m_ref_el.SetSize(0);
+	p_id.st = ID_STROKE;
+	double x_scale = (double)m_ref_size/22.0;
+	double y_scale = (double)m_ref_size/22.0;
+	double y_offset = 9.0*y_scale;
+	int i_el = 0;
+	double xc = 0.0;
+	CPoint si, sf, tb_org;
+	char ref_str[] = "REF";
+	for( int ic=0; ic<3; ic++ )
+	{
+		// get stroke info for character
+		int xi, yi, xf, yf;
+		double coord[64][4];
+		double min_x, min_y, max_x, max_y;
+		int nstrokes = fontutil->GetCharStrokes( ref_str[ic], SIMPLEX, 
+			&min_x, &min_y, &max_x, &max_y, coord, 64 );
+		for( int is=0; is<nstrokes; is++ )
+		{
+			xi = (coord[is][0] - min_x)*x_scale + xc;
+			yi = coord[is][1]*y_scale + y_offset;
+			xf = (coord[is][2] - min_x)*x_scale + xc;
+			yf = coord[is][3]*y_scale + y_offset;
+			// get stroke relative to text box
+			if( yi > yf )
+			{
+				si.x = xi;
+				sf.x = xf;
+				si.y = yi;
+				sf.y = yf;
+			}
+			else
+			{
+				si.x = xf;
+				sf.x = xi;
+				si.y = yf;
+				sf.y = yi;
+			}
+			// rotate with text box
+			tb_org.x = m_ref_xi;
+			tb_org.y = m_ref_yi;
+			RotatePoint( &si, m_ref_angle, zero );
+			RotatePoint( &sf, m_ref_angle, zero );
+			// move to origin of text box
+			si.x += tb_org.x;
+			sf.x += tb_org.x;
+			si.y += tb_org.y;
+			sf.y += tb_org.y;
+			// draw
+			p_id.i = i_el;
+			m_ref_el.SetSize(i_el+1);
+			m_ref_el[i_el] = dlist->Add( p_id, this, 
+				silk_lay, DL_LINE, 1, m_ref_w, 0, 
+				si.x, si.y, sf.x, sf.y, 0, 0 );
+			i_el++;
+		}
+		xc += (max_x - min_x + 8.0)*x_scale;
+	}
+	// draw selection rectangle for ref text
+	p_id.st = ID_SEL_REF_TXT;
+	p_id.i = 0;
+	int width = xc - 3.0*x_scale;
+	si.x = m_ref_xi;
+	sf.x = m_ref_xi + width;
+	si.y = m_ref_yi;
+	sf.y = m_ref_yi + m_ref_size;
+	// rotate rectangle relative to part
+	RotatePoint( &sf, m_ref_angle, si );
+	// draw
+	m_ref_sel = dlist->AddSelector( p_id, NULL, silk_lay, DL_HOLLOW_RECT, 1,
+		0, 0, si.x, si.y, sf.x, sf.y, si.x, si.y );
 
 	// draw value text
-	id vid( ID_PART, ID_VALUE_TXT );
-	bMirror = (m_value_layer == LAY_FP_SILK_BOTTOM || m_value_layer == LAY_FP_BOTTOM_COPPER) ;
-	CString v_str( "VALUE" );
-	m_value_text.Init( m_dlist, vid, m_value_xi, m_value_yi, m_value_angle,
-			bMirror, FALSE, m_value_layer, m_value_size, m_value_w,
-			fontutil, &v_str );
+	nstrokes = 0;
+	m_value_el.SetSize(0);
+	if( m_value_size )
+	{
+		p_id.st = ID_STROKE;
+		x_scale = (double)m_value_size/22.0;
+		y_scale = (double)m_value_size/22.0;
+		y_offset = 9.0*y_scale;
+		i_el = 0;
+		xc = 0.0;
+		char value_str[] = "VALUE";
+		for( int ic=0; ic<5; ic++ )
+		{
+			// get stroke info for character
+			int xi, yi, xf, yf;
+			double coord[64][4];
+			double min_x, min_y, max_x, max_y;
+			int nstrokes = fontutil->GetCharStrokes( value_str[ic], SIMPLEX, 
+				&min_x, &min_y, &max_x, &max_y, coord, 64 );
+			for( int is=0; is<nstrokes; is++ )
+			{
+				xi = (coord[is][0] - min_x)*x_scale + xc;
+				yi = coord[is][1]*y_scale + y_offset;
+				xf = (coord[is][2] - min_x)*x_scale + xc;
+				yf = coord[is][3]*y_scale + y_offset;
+				// get stroke relative to text box
+				if( yi > yf )
+				{
+					si.x = xi;
+					sf.x = xf;
+					si.y = yi;
+					sf.y = yf;
+				}
+				else
+				{
+					si.x = xf;
+					sf.x = xi;
+					si.y = yf;
+					sf.y = yi;
+				}
+				// rotate with text box
+				tb_org.x = m_value_xi;
+				tb_org.y = m_value_yi;
+				RotatePoint( &si, m_value_angle, zero );
+				RotatePoint( &sf, m_value_angle, zero );
+				// move to origin of text box
+				si.x += tb_org.x;
+				sf.x += tb_org.x;
+				si.y += tb_org.y;
+				sf.y += tb_org.y;
+				// draw
+				p_id.i = i_el;
+				m_value_el.SetSize(i_el+1);
+				m_value_el[i_el] = dlist->Add( p_id, this, 
+					silk_lay, DL_LINE, 1, m_value_w, 0, 
+					si.x, si.y, sf.x, sf.y, 0, 0 );
+				i_el++;
+			}
+			xc += (max_x - min_x + 8.0)*x_scale;
+		}
+		// draw selection rectangle for value text
+		p_id.st = ID_SEL_VALUE_TXT;
+		p_id.i = 0;
+		width = xc - 3.0*x_scale;
+		si.x = m_value_xi;
+		sf.x = m_value_xi + width;
+		si.y = m_value_yi;
+		sf.y = m_value_yi + m_value_size;
+		// rotate rectangle relative to part
+		RotatePoint( &sf, m_value_angle, si );
+		// draw
+		m_value_sel = dlist->AddSelector( p_id, NULL, silk_lay, DL_HOLLOW_RECT, 1,
+			0, 0, si.x, si.y, sf.x, sf.y, si.x, si.y );
+	}
 
 	// now draw outline polylines
 	p_id.st = ID_OUTLINE;
 	for( int i=0; i<m_outline_poly.GetSize(); i++ )
 	{
 		p_id.i = i;
+		m_outline_poly[i].SetLayer( LAY_FP_SILK_TOP );
 		int sel_box_size = m_outline_poly[i].GetW();
 		sel_box_size = max( sel_box_size, 5*NM_PER_MIL );
 		m_outline_poly[i].SetSelBoxSize( sel_box_size );
@@ -2950,8 +3072,18 @@ void CEditShape::Undraw()
 	m_pad_inner_el.RemoveAll();
 	m_pad_bottom_el.RemoveAll();
 
-	m_ref_text.Undraw();
-	m_value_text.Undraw();
+	for( int i=0; i<m_ref_el.GetSize(); i++ )
+		m_dlist->Remove( m_ref_el[i] );
+	m_ref_el.SetSize(0);
+	m_dlist->Remove( m_ref_sel );
+	m_ref_sel = NULL;
+
+	for( int i=0; i<m_value_el.GetSize(); i++ )
+		m_dlist->Remove( m_value_el[i] );
+	m_value_el.SetSize(0);
+	if( m_value_size )
+		m_dlist->Remove( m_value_sel );
+	m_value_sel = NULL;
 
 	for( int i=0; i<m_outline_poly.GetSize(); i++ )
 		m_outline_poly[i].Undraw();
@@ -3176,6 +3308,95 @@ void CEditShape::CancelDraggingCentroid()
 	m_dlist->StopDragging();
 }
 
+// Select ref text
+//
+void CEditShape::SelectRef()
+{
+	// select it by making its selection rectangle visible
+	m_dlist->HighLight( DL_HOLLOW_RECT, 
+		m_dlist->Get_x(m_ref_sel), 
+		m_dlist->Get_y(m_ref_sel),
+		m_dlist->Get_xf(m_ref_sel), 
+		m_dlist->Get_yf(m_ref_sel), 
+		1 );
+}
+
+// Start dragging ref text box
+//
+void CEditShape::StartDraggingRef( CDC * pDC )
+{
+	// make ref text invisible
+	for( int i=0; i<m_ref_el.GetSize(); i++ )
+		m_dlist->Set_visible( m_ref_el[i], 0 );
+	// cancel selection 
+	m_dlist->CancelHighLight();
+	// drag
+	m_dlist->StartDraggingRectangle( pDC, 
+						m_dlist->Get_x_org(m_ref_sel), 
+						m_dlist->Get_y_org(m_ref_sel),
+						m_dlist->Get_x(m_ref_sel)-m_dlist->Get_x_org(m_ref_sel), 
+						m_dlist->Get_y(m_ref_sel)-m_dlist->Get_y_org(m_ref_sel),
+						m_dlist->Get_xf(m_ref_sel)-m_dlist->Get_x_org(m_ref_sel), 
+						m_dlist->Get_yf(m_ref_sel)-m_dlist->Get_y_org(m_ref_sel),
+						0, LAY_FP_SELECTION );
+}
+
+// Cancel dragging ref text box
+//
+void CEditShape::CancelDraggingRef()
+{
+	// make ref text visible
+	for( int i=0; i<m_ref_el.GetSize(); i++ )
+		m_dlist->Set_visible( m_ref_el[i], 1 );
+	// stop dragging
+	m_dlist->StopDragging();
+}
+
+// Select value
+//
+void CEditShape::SelectValue()
+{
+	// select it by making its selection rectangle visible
+	m_dlist->HighLight( DL_HOLLOW_RECT, 
+		m_dlist->Get_x(m_value_sel), 
+		m_dlist->Get_y(m_value_sel),
+		m_dlist->Get_xf(m_value_sel), 
+		m_dlist->Get_yf(m_value_sel), 
+		1 );
+}
+
+// Start dragging value
+//
+void CEditShape::StartDraggingValue( CDC * pDC )
+{
+	// make value text invisible
+	for( int i=0; i<m_value_el.GetSize(); i++ )
+		m_dlist->Set_visible( m_value_el[i], 0 );
+	// cancel selection 
+	m_dlist->CancelHighLight();
+	// drag
+	m_dlist->StartDraggingRectangle( pDC, 
+						m_dlist->Get_x_org(m_value_sel), 
+						m_dlist->Get_y_org(m_value_sel),
+						m_dlist->Get_x(m_value_sel)-m_dlist->Get_x_org(m_value_sel), 
+						m_dlist->Get_y(m_value_sel)-m_dlist->Get_y_org(m_value_sel),
+						m_dlist->Get_xf(m_value_sel)-m_dlist->Get_x_org(m_value_sel), 
+						m_dlist->Get_yf(m_value_sel)-m_dlist->Get_y_org(m_value_sel),
+						0, LAY_FP_SELECTION );
+}
+
+// Cancel dragging value
+//
+void CEditShape::CancelDraggingValue()
+{
+	// make ref text visible
+	for( int i=0; i<m_value_el.GetSize(); i++ )
+		m_dlist->Set_visible( m_value_el[i], 1 );
+	// stop dragging
+	m_dlist->StopDragging();
+}
+
+
 void CEditShape::ShiftToInsertPadName( CString * astr, int n )
 {
 	CString test;
@@ -3208,6 +3429,38 @@ BOOL CEditShape::GenerateSelectionRectangle( CRect * r )
 
 	CRect br;
 	br = GetBounds( TRUE );
+
+#if 0
+	br.left = br.bottom = INT_MAX;
+	br.right = br.top = INT_MIN;
+	for( int ip=0; ip<GetNumPins(); ip++ )
+	{
+		CRect padr = GetPadBounds( ip );
+		br.left = min( br.left, padr.left ); 
+		br.bottom = min( br.bottom, padr.bottom ); 
+		br.right = max( br.right, padr.right ); 
+		br.top = max( br.top, padr.top ); 
+	}
+	for( int ip=0; ip<m_outline_poly.GetSize(); ip++ )
+	{
+		CRect polyr = m_outline_poly[ip].GetBounds();
+		br.left = min( br.left, polyr.left ); 
+		br.bottom = min( br.bottom, polyr.bottom ); 
+		br.right = max( br.right, polyr.right ); 
+		br.top = max( br.top, polyr.top ); 
+	}
+	CRect tr;
+	BOOL bText = m_tl->GetTextBoundaries( &tr );
+	if( bText )
+	{
+		br.left = min( br.left, tr.left ); 
+		br.bottom = min( br.bottom, tr.bottom );  
+		br.right = max( br.right, tr.right ); 
+		br.top = max( br.top, tr.top ); 
+	}
+	if(	br.left == INT_MAX || br.bottom == INT_MAX || br.right == INT_MIN || br.top == INT_MIN )
+		return FALSE;
+#endif
 
 	br.left -= 10*NM_PER_MIL;
 	br.right += 10*NM_PER_MIL;

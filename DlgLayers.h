@@ -1,8 +1,7 @@
 #pragma once
 #include "layers.h"
 
-#define NUM_MAIN_LAYERS (LAY_TOP_COPPER + 16)
-#define NUM_DLG_LAYERS (LAY_TOP_COPPER + 20)	// CPT: Includes the 4 footprint layers
+#define NUM_DLG_LAYERS (LAY_TOP_COPPER + 16)
 
 // CDlgLayers dialog
 
@@ -21,20 +20,17 @@ protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 
 private:
-	int *m_vis;
-	// CPT added and removed:
-	int *m_fp_vis;
-	// int * m_rgb_ptr;
+	int * m_vis;
+	int m_rgb[MAX_LAYERS][3];
+	int * m_rgb_ptr;
 	int m_nlayers;
 	CBrush m_brush;
 	CColorDialog * m_cdlg;
 
 	DECLARE_MESSAGE_MAP()
 public:
-	int m_rgb[NUM_DLG_LAYERS][3];
 	int m_check[NUM_DLG_LAYERS];
-	int fColorsDefault;
-	void Initialize( int nlayers, int vis[], int fp_vis[], int rgb[][3], int fp_rgb[][3] );
+	void Initialize( int nlayers, int vis[], int rgb[][3] );
 	void EditColor( int layer );
 	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
 	afx_msg void OnBnClickedButtonLayer1();
@@ -65,8 +61,4 @@ public:
 	afx_msg void OnBnClickedButtonLayer26();
 	afx_msg void OnBnClickedButtonLayer27();
 	afx_msg void OnBnClickedButtonLayer28();
-	afx_msg void OnBnClickedButtonLayer29();
-	afx_msg void OnBnClickedButtonLayer30();
-	afx_msg void OnBnClickedButtonLayer31();
-	afx_msg void OnBnClickedButtonLayer32();
 };

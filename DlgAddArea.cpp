@@ -32,12 +32,11 @@ void CDlgAddArea::DoDataExchange(CDataExchange* pDX)
 	if( !pDX->m_bSaveAndValidate )
 	{
 		// incoming, initialize net list
-		CIterator_cnet iter_net(m_nlist);
-		cnet * net = iter_net.GetFirst();
+		cnet * net = m_nlist->GetFirstNet();
 		while( net )
 		{
 			m_combo_net.AddString( net->name );
-			net = iter_net.GetNext();
+			net = m_nlist->GetNextNet();
 		}
 		if( m_net )
 		{
@@ -77,8 +76,7 @@ void CDlgAddArea::DoDataExchange(CDataExchange* pDX)
 		m_net = m_nlist->GetNetPtrByName( &m_net_name );
 		if( !m_net )
 		{
-			CString msg ((LPCSTR) IDS_IllegalNetName);
-			AfxMessageBox( msg );
+			AfxMessageBox( "Illegal net name" );
 			pDX->Fail();
 		}
 		if( m_radio_none.GetCheck() )
