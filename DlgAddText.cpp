@@ -51,14 +51,12 @@ void CDlgAddText::DoDataExchange(CDataExchange* pDX)
 		// leaving the dialog
 		if( m_str == "" )
 		{
-			CString s ((LPCSTR) IDS_InvalidTextString);
-			AfxMessageBox( s );
+			AfxMessageBox( "Invalid text string" );
 			pDX->Fail();
 		}
 		if( m_str.Find( '\"' ) != -1 )
 		{
-			CString s ((LPCSTR) IDS_TextStringCantContainQuote);
-			AfxMessageBox( s );
+			AfxMessageBox( "Text string can't contain \"" );
 			pDX->Fail();
 		}
 		GetFields();

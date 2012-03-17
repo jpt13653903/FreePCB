@@ -56,22 +56,19 @@ void DlgSetSegmentWidth::DoDataExchange(CDataExchange* pDX)
 		m_hole_width = GetDimensionFromString( &m_via_hole_w_str );
 		if( !(m_tv == 3 || m_width > 0) )
 		{
-			CString s ((LPCSTR) IDS_IllegalTraceWidth);
-			AfxMessageBox( s );
+			AfxMessageBox( "illegal trace width" );
 			pDX->Fail();
 		}
 		if( m_tv != 2 && rb_set_via.GetCheck() != 0 )
 		{
 			if( m_via_width <= 0 )
 			{
-				CString s ((LPCSTR) IDS_IllegalViaWidth);
-				AfxMessageBox( s );
+				AfxMessageBox( "illegal via width" );
 				pDX->Fail();
 			}
 			if( m_hole_width <= 0 )
 			{
-				CString s ((LPCSTR) IDS_IllegalHoleWidth);
-				AfxMessageBox( s );
+				AfxMessageBox( "illegal hole width" );
 				pDX->Fail();
 			}
 		}

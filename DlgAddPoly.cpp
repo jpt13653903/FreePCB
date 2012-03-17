@@ -4,8 +4,8 @@
 #include "stdafx.h"
 #include "FreePcb.h"
 #include "DlgAddPoly.h"
+#include ".\dlgaddpoly.h"
 
-static int gLastLayerIndex = -1;
 
 // CDlgAddPoly dialog
 
@@ -14,7 +14,6 @@ CDlgAddPoly::CDlgAddPoly(CWnd* pParent /*=NULL*/)
 	: CDialog(CDlgAddPoly::IDD, pParent)
 {
 	m_width = 10*NM_PER_MIL;	// default
-	m_layer_index = 0;
 }
 
 CDlgAddPoly::~CDlgAddPoly()
@@ -28,9 +27,6 @@ void CDlgAddPoly::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_RADIO_CLOSED, m_radio_closed);
 	DDX_Control(pDX, IDC_COMBO_ADD_POLY_UNITS, m_combo_units);
 	DDX_Control( pDX, IDC_EDIT_WIDTH, m_edit_width );
-	DDX_Control(pDX, IDC_COMBO_LAYER, m_combo_layer);
-	DDX_Control(pDX, IDCANCEL, m_radio_closed_and_filled);
-	DDX_Control(pDX, IDC_COMBO_PIN_NAME, m_combo_pin_name);
 	if( !pDX->m_bSaveAndValidate )
 	{
 		// entry
@@ -41,14 +37,6 @@ void CDlgAddPoly::DoDataExchange(CDataExchange* pDX)
 			m_combo_units.SetCurSel( 0 );
 		else
 			m_combo_units.SetCurSel( 1 );
-		m_combo_layer.InsertString( 0, "TOP SILK" );
-		m_combo_layer.InsertString( 1, "BOTTOM SILK" );
-		m_combo_layer.InsertString( 2, "TOP COPPER" );
-		m_combo_layer.InsertString( 3, "BOTTOM COPPER" );
-		for( int ip=0; ip<m_padstack->GetSize(); ip++ )
-		{
-			m_combo_pin_name.InsertString( ip, (*m_padstack)[ip].name );
-		}
 		SetFields();
 	}
 	else
@@ -59,54 +47,20 @@ void CDlgAddPoly::DoDataExchange(CDataExchange* pDX)
 		if( m_width < 1*NM_PER_MIL || m_width > 999*NM_PER_MIL )
 		{
 			pDX->PrepareEditCtrl( IDC_EDIT_WIDTH );
-			CString s ((LPCSTR) IDS_WidthOutOfRange);
-			AfxMessageBox( s );
+			AfxMessageBox( "Width out of range (1 to 999 mils)" );
 			pDX->Fail();
 		}
-		gLastLayerIndex = m_layer_index;
 	}
 }
 
-// initialize parameters
-// if bNewPoly, this is a new polyline
-// if layer_index == -1, use layer used last time, or 0
-// if width == -1, use width used last time, or 10 mils
-// if bNewPoly, assume closed
-void CDlgAddPoly::Initialize( BOOL bNewPoly, int layer_index, int units, 
-							 int width, BOOL bClosed, CArray<padstack> * padstack )
+void CDlgAddPoly::Initialize( int units )
 {
-	m_bNewPoly = bNewPoly;
 	m_units = units;
-	if( layer_index == -1 )
-	{
-		if( gLastLayerIndex == -1 )
-		{
-			m_layer_index = 0;
-		}
-		else
-		{
-			m_layer_index = gLastLayerIndex;
-		}
-	}
-	else
-	{
-		m_layer_index = layer_index;
-	}
-	if( bNewPoly )
-	{
-		m_closed_flag = 1;
-	}
-	else
-	{
-		m_closed_flag = bClosed;
-	}
-	m_padstack = padstack;
 }
 
 
 BEGIN_MESSAGE_MAP(CDlgAddPoly, CDialog)
 	ON_CBN_SELCHANGE(IDC_COMBO_ADD_POLY_UNITS, OnCbnSelchangeComboAddPolyUnits)
-	ON_CBN_SELCHANGE(IDC_COMBO_LAYER, &CDlgAddPoly::OnCbnSelchangeComboLayer)
 END_MESSAGE_MAP()
 
 
@@ -123,17 +77,6 @@ void CDlgAddPoly::GetFields()
 		m_edit_width.GetWindowText( str );
 		m_width = atof( str ) * 1000000.0;
 	}
-	m_layer_index = m_combo_layer.GetCurSel();
-	m_closed_flag = m_radio_closed.GetCheck();
-	int pin_name_index = m_combo_pin_name.GetCurSel();
-	if( pin_name_index == CB_ERR )
-	{
-		m_pin_name = "";
-	}
-	else
-	{
-		m_pin_name = (*m_padstack)[pin_name_index].name;
-	}
 }
 
 void CDlgAddPoly::SetFields()
@@ -149,12 +92,7 @@ void CDlgAddPoly::SetFields()
 		MakeCStringFromDouble( &str, m_width/1000000.0 );
 		m_edit_width.SetWindowText( str );
 	}
-	m_combo_layer.SetCurSel( m_layer_index );
-	m_radio_open.SetCheck( !m_closed_flag );
-	m_radio_closed.SetCheck( m_closed_flag );
-	m_combo_pin_name.EnableWindow( m_layer_index > 1 );
 }
-
 void CDlgAddPoly::OnCbnSelchangeComboAddPolyUnits()
 {
 	GetFields();
@@ -165,9 +103,3 @@ void CDlgAddPoly::OnCbnSelchangeComboAddPolyUnits()
 	SetFields();
 }
 
-
-void CDlgAddPoly::OnCbnSelchangeComboLayer()
-{
-	m_layer_index = m_combo_layer.GetCurSel();
-	m_combo_pin_name.EnableWindow( m_layer_index > 1 );
-}

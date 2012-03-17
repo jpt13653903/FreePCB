@@ -821,12 +821,11 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 		cnet * first_area_net = NULL;
 		CArray<cnet*> area_net_list;
 		CArray<carea*> area_list;
-		CIterator_cnet iter_net(nl);
-		cnet * net = iter_net.GetFirst();
+		cnet * net = nl->GetFirstNet();
 		while( net )
 		{
 			// loop through all areas
-			for( int ia=0; ia<net->NumAreas(); ia++ )
+			for( int ia=0; ia<net->nareas; ia++ )
 			{
 				CPolyLine * p = net->area[ia].poly;
 				if( p->GetLayer() == layer )
@@ -846,17 +845,17 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 						num_area_nets = 2;
 				}
 			}
-			net = iter_net.GetNext();
+			net = nl->GetNextNet();
 		}
 
 		if( PASS1 )
 		{
 			CArray< c_area > ca;
-			cnet * net = iter_net.GetFirst();
+			cnet * net = nl->GetFirstNet();
 			while( net ) 
 			{
 				// loop through all areas
-				for( int ia=0; ia<net->NumAreas(); ia++ )
+				for( int ia=0; ia<net->nareas; ia++ )
 				{
 					net->area[ia].utility = INT_MAX;		// mark as undrawn
 					CPolyLine * p = net->area[ia].poly;
@@ -883,12 +882,11 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 						ca[ica].ia = ia;
 						carea * a = &net->area[ia];
 						// loop through all nets to find cutouts
-						CIterator_cnet iter_net_cutout(nl);
-						cnet * cutout_net = iter_net_cutout.GetFirst();
+						cnet * cutout_net = nl->GetFirstNet();
 						while( cutout_net )
 						{
 							// loop through all areas to find cutouts
-							for( int cutout_ia=0; cutout_ia<cutout_net->NumAreas(); cutout_ia++ )
+							for( int cutout_ia=0; cutout_ia<cutout_net->nareas; cutout_ia++ )
 							{
 								carea * cutout_a = &cutout_net->area[cutout_ia];
 								CPolyLine * cutout_p = cutout_a->poly;
@@ -913,11 +911,11 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 									}
 								}
 							}
-							cutout_net = iter_net_cutout.GetNext();
+							cutout_net = nl->GetNextNet();
 						}
 					}
 				}
-				net = iter_net.GetNext();
+				net = nl->GetNextNet();
 			}
 
 			// set order for drawing areas, save in net->area[ia].utility
@@ -968,10 +966,10 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 				area_pass++;
 				// draw areas
 				current_ap.m_type = CAperture::AP_NONE;	// force selection of aperture
-				net = iter_net.GetFirst();
+				net = nl->GetFirstNet();
 				while( net )
 				{
-					for( int ia=0; ia<net->NumAreas(); ia++ )
+					for( int ia=0; ia<net->nareas; ia++ )
 					{
 						carea * a = &net->area[ia];
 						if( a->poly->GetLayer() == layer )
@@ -1014,14 +1012,14 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 								n_undrawn++;
 						}
 					}
-					net = iter_net.GetNext();
+					net = nl->GetNextNet();
 				}
 				// draw area cutouts
 				current_ap.m_type = CAperture::AP_NONE;	// force selection of aperture
-				net = iter_net.GetFirst();
+				net = nl->GetFirstNet();
 				while( net )
 				{
-					for( int ia=0; ia<net->NumAreas(); ia++ )
+					for( int ia=0; ia<net->nareas; ia++ )
 					{
 						carea * a = &net->area[ia];
 						if ( a->utility == area_pass && a->poly->GetLayer() == layer )
@@ -1065,7 +1063,7 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 							}
 						}
 					}
-					net = iter_net.GetNext();
+					net = nl->GetNextNet();
 				}
 			}
 		}
@@ -1074,16 +1072,16 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 		{
 			// ********** draw pad, trace, and via clearances and thermals ***********
 			// first, remove all GpcPolys
-			net = iter_net.GetFirst();
+			net = nl->GetFirstNet();
 			while( net )
 			{
-				for( int ia=0; ia<net->NumAreas(); ia++ )
+				for( int ia=0; ia<net->nareas; ia++ )
 				{
 					carea * a = &net->area[ia];
 					CPolyLine * p = a->poly;
 					p->FreeGpcPoly();
 				}
-				net = iter_net.GetNext();
+				net = nl->GetNextNet();
 			}
 			if( PASS1 ) 
 			{
@@ -1341,14 +1339,13 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 				{
 					f->WriteString( "\nG04 Draw clearances for traces*\n" );
 				}
-				net = iter_net.GetFirst();
+				net = nl->GetFirstNet();
 				while( net )
 				{
-					CIterator_cconnect iter_con(net);
-					for( cconnect * c=iter_con.GetFirst(); c; c=iter_con.GetNext() )
+					for( int ic=0; ic<net->nconnects; ic++ )
 					{
-						int ic = iter_con.GetIndex();
-						int nsegs = c->NumSegs();
+						int nsegs = net->connect[ic].nsegs;
+						cconnect * c = &net->connect[ic]; 
 						for( int is=0; is<nsegs; is++ )
 						{
 							// get segment and vertices
@@ -1449,7 +1446,7 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 							{
 								// test for segment intersection with area on own net
 								BOOL bIntOwnNet = FALSE;
-								for( int ia=0; ia<net->NumAreas(); ia++ )
+								for( int ia=0; ia<net->nareas; ia++ )
 								{
 									CPolyLine * poly = net->area[ia].poly; 
 									if( poly->TestPointInside( xi, yi ) )
@@ -1527,7 +1524,7 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 							}
 						}
 					}
-					net = iter_net.GetNext();
+					net = nl->GetNextNet();
 				}
 			}		
 			if( tl )
@@ -1568,7 +1565,7 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 			f->WriteString( "%LPD*%\n" );
 			current_ap.m_type = CAperture::AP_NONE;	// force selection of aperture
 		}
-		// draw pads, silkscreen items, reference designators and value
+		// draw pads and reference designators
 		if( pl )
 		{
 			// iterate through all parts and draw pads
@@ -1646,101 +1643,89 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 						}
 					}
 				}
-				// draw part outline and text strings if any strokes on this layer
-				BOOL bOnLayer = FALSE;
-				int nstrokes = part->m_outline_stroke.GetSize();
-				for( int ips=0; ips<nstrokes; ips++ )
+				// now draw silkscreen items
+				if( layer == LAY_SILK_TOP && part->side == 0 
+					|| layer == LAY_SILK_BOTTOM && part->side == 1 )
 				{
-					if( part->m_outline_stroke[ips].layer == layer )
-					{
-						bOnLayer = TRUE;
-						break;
-					}
-				}
-				if( bOnLayer )
-				{
+					// draw part outline
 					if( PASS1 )
 					{
-						line.Format( "G04 draw outline and text for part %s*\n", part->ref_des ); 
+						line.Format( "G04 draw part outline for part %s*\n", part->ref_des ); 
 						f->WriteString( line );
 					}
+					int nstrokes = part->m_outline_stroke.GetSize();
 					if( nstrokes )
 					{
 						for( int ips=0; ips<nstrokes; ips++ )
 						{
-							if( part->m_outline_stroke[ips].layer == layer )
+							int s_w = max( part->m_outline_stroke[ips].w, min_silkscreen_stroke_wid );
+							CAperture outline_ap( CAperture::AP_CIRCLE, s_w, 0 );
+							ChangeAperture( &outline_ap, &current_ap, &ap_array, PASS0, f );
+							// move to start of stroke
+							if( PASS1 )
 							{
-								int s_w = max( part->m_outline_stroke[ips].w, min_silkscreen_stroke_wid );
-								CAperture outline_ap( CAperture::AP_CIRCLE, s_w, 0 );
-								ChangeAperture( &outline_ap, &current_ap, &ap_array, PASS0, f );
-								if( PASS1 )
-								{
-									// move to start of stroke
-									::WriteMoveTo( f, part->m_outline_stroke[ips].xi, 
-										part->m_outline_stroke[ips].yi, LIGHT_OFF );
-									int type;
-									if( part->m_outline_stroke[ips].type == DL_LINE )
-										type = CPolyLine::STRAIGHT;
-									else if( part->m_outline_stroke[ips].type == DL_ARC_CW )
-										type = CPolyLine::ARC_CW;
-									else if( part->m_outline_stroke[ips].type == DL_ARC_CCW )
-										type = CPolyLine::ARC_CCW;
-									else
-										ASSERT(0);
-									::WritePolygonSide( f, 
-										part->m_outline_stroke[ips].xi, 
-										part->m_outline_stroke[ips].yi, 
-										part->m_outline_stroke[ips].xf, 
-										part->m_outline_stroke[ips].yf, 
-										type, 10, LIGHT_ON );
-								}
+								::WriteMoveTo( f, part->m_outline_stroke[ips].xi, 
+									part->m_outline_stroke[ips].yi, LIGHT_OFF );
+								int type;
+								if( part->m_outline_stroke[ips].type == DL_LINE )
+									type = CPolyLine::STRAIGHT;
+								else if( part->m_outline_stroke[ips].type == DL_ARC_CW )
+									type = CPolyLine::ARC_CW;
+								else if( part->m_outline_stroke[ips].type == DL_ARC_CCW )
+									type = CPolyLine::ARC_CCW;
+								else
+									ASSERT(0);
+								::WritePolygonSide( f, 
+									part->m_outline_stroke[ips].xi, 
+									part->m_outline_stroke[ips].yi, 
+									part->m_outline_stroke[ips].xf, 
+									part->m_outline_stroke[ips].yf, 
+									type, 10, LIGHT_ON );
 							}
 						}
 					}
-				}
-				// draw reference designator text
-				if( part->m_ref_size && part->m_ref_vis 
-					&& (pl->GetRefPCBLayer( part ) == layer) )
-				{
-					if( PASS1 )
+					// draw reference designator text
+					if( part->m_ref_size && part->m_ref_vis )
 					{
-						line.Format( "G04 draw reference designator for part %s*\n", part->ref_des ); 
-						f->WriteString( line );
-					}
-					int s_w = max( part->m_ref_w, min_silkscreen_stroke_wid );
-					CAperture ref_ap( CAperture::AP_CIRCLE, s_w, 0 );
-					ChangeAperture( &ref_ap, &current_ap, &ap_array, PASS0, f );
-					if( PASS1 )
-					{
-						for( int istroke=0; istroke<part->ref_text_stroke.GetSize(); istroke++ )
+						if( PASS1 )
 						{
-							::WriteMoveTo( f, part->ref_text_stroke[istroke].xi, 
-								part->ref_text_stroke[istroke].yi, LIGHT_OFF );
-							::WriteMoveTo( f, part->ref_text_stroke[istroke].xf, 
-								part->ref_text_stroke[istroke].yf, LIGHT_ON );
+							line.Format( "G04 draw reference designator for part %s*\n", part->ref_des ); 
+							f->WriteString( line );
+						}
+						int s_w = max( part->m_ref_w, min_silkscreen_stroke_wid );
+						CAperture ref_ap( CAperture::AP_CIRCLE, s_w, 0 );
+						ChangeAperture( &ref_ap, &current_ap, &ap_array, PASS0, f );
+						if( PASS1 )
+						{
+							for( int istroke=0; istroke<part->ref_text_stroke.GetSize(); istroke++ )
+							{
+								::WriteMoveTo( f, part->ref_text_stroke[istroke].xi, 
+									part->ref_text_stroke[istroke].yi, LIGHT_OFF );
+								::WriteMoveTo( f, part->ref_text_stroke[istroke].xf, 
+									part->ref_text_stroke[istroke].yf, LIGHT_ON );
+							}
 						}
 					}
-				}
-				// draw value text
-				if( part->m_value_size && part->m_value_vis 
-					&& (pl->GetValuePCBLayer(part) == layer) )
-				{
-					if( PASS1 )
+					// draw value text
+					if( part->m_value_size && part->m_value_vis )
 					{
-						line.Format( "G04 draw value for part %s*\n", part->ref_des ); 
-						f->WriteString( line );
-					}
-					int s_w = max( part->m_ref_w, min_silkscreen_stroke_wid );
-					CAperture value_ap( CAperture::AP_CIRCLE, s_w, 0 );
-					ChangeAperture( &value_ap, &current_ap, &ap_array, PASS0, f );
-					if( PASS1 )
-					{
-						for( int istroke=0; istroke<part->value_stroke.GetSize(); istroke++ )
+						if( PASS1 )
 						{
-							::WriteMoveTo( f, part->value_stroke[istroke].xi, 
-								part->value_stroke[istroke].yi, LIGHT_OFF );
-							::WriteMoveTo( f, part->value_stroke[istroke].xf, 
-								part->value_stroke[istroke].yf, LIGHT_ON );
+							line.Format( "G04 draw value for part %s*\n", part->ref_des ); 
+							f->WriteString( line );
+						}
+						int s_w = max( part->m_ref_w, min_silkscreen_stroke_wid );
+						CAperture value_ap( CAperture::AP_CIRCLE, s_w, 0 );
+						ChangeAperture( &value_ap, &current_ap, &ap_array, PASS0, f );
+						if( PASS1 )
+						{
+							for( int istroke=0; istroke<part->value_stroke.GetSize(); istroke++ )
+							{
+								::WriteMoveTo( f, part->value_stroke[istroke].xi, 
+									part->value_stroke[istroke].yi, LIGHT_OFF );
+								::WriteMoveTo( f, part->value_stroke[istroke].xf, 
+									part->value_stroke[istroke].yf, LIGHT_ON );
+							}
 						}
 					}
 				}
@@ -1759,20 +1744,19 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 			POSITION pos;
 			CString name;
 			void * ptr;
-			net = iter_net.GetFirst();
-			while( net )
+			for( pos = nl->m_map.GetStartPosition(); pos != NULL; )
 			{
-				CIterator_cconnect iter_con(net);
-				for( cconnect * c=iter_con.GetFirst(); c; c=iter_con.GetNext() )
+				nl->m_map.GetNextAssoc( pos, name, ptr );
+				cnet * net = (cnet*)ptr;
+				for( int ic=0; ic<net->nconnects; ic++ )
 				{
-					int ic = iter_con.GetIndex();
-					int nsegs = c->NumSegs();
+					int nsegs = net->connect[ic].nsegs;
 					for( int is=0; is<nsegs; is++ )
 					{
 						// get segment info
-						cseg * s = &c->seg[is];
-						cvertex * pre_vtx = &c->vtx[is];
-						cvertex * post_vtx = &c->vtx[is+1];
+						cseg * s = &(net->connect[ic].seg[is]);
+						cvertex * pre_vtx = &(net->connect[ic].vtx[is]);
+						cvertex * post_vtx = &(net->connect[ic].vtx[is+1]);
 						// get following via info
 						int test, pad_w, hole_w;
 						nl->GetViaPadInfo( net, ic, is+1, layer,
@@ -1820,7 +1804,6 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 						}
 					}
 				}
-				net = iter_net.GetNext();
 			}
 		}
 		// draw text
@@ -1977,19 +1960,18 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 				POSITION pos;
 				CString name;
 				void * ptr;
-				net = iter_net.GetFirst();
-				while( net )
+				for( pos = nl->m_map.GetStartPosition(); pos != NULL; )
 				{
-					CIterator_cconnect iter_con(net);
-					for( cconnect * c=iter_con.GetFirst(); c; c=iter_con.GetNext() )
+					nl->m_map.GetNextAssoc( pos, name, ptr );
+					cnet * net = (cnet*)ptr;
+					for( int ic=0; ic<net->nconnects; ic++ )
 					{
-//						int ic = iter_con.GetIndex();
-						int nsegs = c->NumSegs();
+						int nsegs = net->connect[ic].nsegs;
 						for( int is=0; is<nsegs; is++ )
 						{
 							// get segment
-							cseg * s = &c->seg[is];
-							cvertex * post_vtx = &c->vtx[is+1];
+							cseg * s = &(net->connect[ic].seg[is]);
+							cvertex * post_vtx = &(net->connect[ic].vtx[is+1]);
 							if( post_vtx->via_w )
 							{
 								// via exists
@@ -2001,7 +1983,6 @@ int WriteGerberFile( CStdioFile * f, int flags, int layer,
 							}
 						}
 					}
-					net = iter_net.GetNext();
 				}
 			}
 		}
@@ -2068,13 +2049,12 @@ int WriteDrillFile( CStdioFile * file, CPartList * pl, CNetList * nl, CArray<CPo
 		{
 			nl->m_map.GetNextAssoc( pos, name, ptr );
 			cnet * net = (cnet*)ptr;
-			CIterator_cconnect iter_con(net);
-			for( cconnect * c=iter_con.GetFirst(); c; c=iter_con.GetNext() )
+			for( int ic=0; ic<net->nconnects; ic++ )
 			{
-				int nsegs = c->NumSegs();
+				int nsegs = net->connect[ic].nsegs;
 				for( int is=0; is<nsegs; is++ )
 				{
-					cvertex * v = &c->vtx[is+1];
+					cvertex * v = &(net->connect[ic].vtx[is+1]);
 					if( v->via_w )
 					{
 						// via
@@ -2183,16 +2163,16 @@ int WriteDrillFile( CStdioFile * file, CPartList * pl, CNetList * nl, CArray<CPo
 					POSITION pos;
 					CString name;
 					void * ptr;
-					CIterator_cnet iter_net(nl);
-					for( cnet * net=iter_net.GetFirst(); net; net=iter_net.GetNext() )
+					for( pos = nl->m_map.GetStartPosition(); pos != NULL; )
 					{
-						CIterator_cconnect iter_con(net);
-						for( cconnect * c=iter_con.GetFirst(); c; c=iter_con.GetNext() )
+						nl->m_map.GetNextAssoc( pos, name, ptr );
+						cnet * net = (cnet*)ptr;
+						for( int ic=0; ic<net->nconnects; ic++ )
 						{
-							int nsegs = c->NumSegs();
+							int nsegs = net->connect[ic].nsegs;
 							for( int is=0; is<nsegs; is++ )
 							{
-								cvertex * v = &(c->vtx[is+1]);
+								cvertex * v = &(net->connect[ic].vtx[is+1]);
 								if( v->via_w )
 								{
 									// via

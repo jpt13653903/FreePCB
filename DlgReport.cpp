@@ -130,35 +130,25 @@ void CDlgReport::OnBnClickedOk()
 	int ok = file.Open( fn, CFile::modeCreate | CFile::modeWrite ); 
 	if( !ok )     
 	{ 
-		CString s ((LPCSTR) IDS_UnableToOpenFile), mess;
-		mess.Format(s, fn);
+		CString mess = "Unable to open file \" " + fn + "\""; 
 		AfxMessageBox( mess, MB_OK ); 
 		OnCancel();
 	}
-	CString s ((LPCSTR) IDS_FreePCBProjectReport), mess;
-	mess.Format(s,  str_units);
-	file.WriteString( mess );
-	s.LoadStringA(IDS_ProjectName);
-	mess.Format(s, m_doc->m_name);
-	file.WriteString( mess );
-	s.LoadStringA(IDS_ProjectFile);
-	mess.Format(s, m_doc->m_pcb_full_path);
-	file.WriteString( mess );
-	s.LoadStringA(IDS_DefaultLibraryFolder);
-	mess.Format(s, m_doc->m_full_lib_dir);
-	file.WriteString( mess );
+	file.WriteString( "FreePCB project report (default units = " + str_units + ")\n" );   
+	file.WriteString( "============================================\n" );
+	file.WriteString( "Project name: " + m_doc->m_name + "\n" );
+	file.WriteString( "Project file: " + m_doc->m_pcb_full_path + "\n" );
+	file.WriteString( "Default library folder: " + m_doc->m_full_lib_dir + "\n" );
 	CMap <int,int,int,int> hole_size_map;
 
 	if( !(m_flags & NO_PCB_STATS) )
 	{
-		CString s ((LPCSTR) IDS_BoardStatistics);
-		file.WriteString( s );
-		s.LoadStringA(IDS_NumberOfCopperLayers);
-		mess.Format(s, m_doc->m_num_copper_layers);
-		file.WriteString( mess );
-		s.LoadStringA(IDS_NumberOfBoardOutlines);
-		mess.Format(s, m_doc->m_board_outline.GetSize());
-		file.WriteString( mess );
+		file.WriteString( "\nBoard statistics\n" );
+		file.WriteString( "==============\n" );
+		line.Format( "Number of copper layers: %d\n", m_doc->m_num_copper_layers );
+		file.WriteString( line );
+		line.Format( "Number of board outlines: %d\n", m_doc->m_board_outline.GetSize() );
+		file.WriteString( line );
 		CRect all_board_bounds;
 		all_board_bounds.left = INT_MAX;
 		all_board_bounds.bottom = INT_MAX;
@@ -176,9 +166,7 @@ void CDlgReport::OnBnClickedOk()
 		int y = abs(all_board_bounds.top - all_board_bounds.bottom);
 		::MakeCStringFromDimension( &str1, x, m_units, TRUE, FALSE, TRUE, 3 ); 
 		::MakeCStringFromDimension( &str2, y, m_units, TRUE, FALSE, TRUE, 3 );
-		s.LoadStringA(IDS_BoardOutlinesExtent);
-		mess.Format(s, str1, str2);
-		file.WriteString( mess );
+		file.WriteString( "Board outline(s) extent: X = " + str1 + "; Y = " + str2 + "\n" );
 	}
 	int num_parts = 0;
 	int num_parts_with_fp = 0;
@@ -215,26 +203,24 @@ void CDlgReport::OnBnClickedOk()
 	if( !(m_flags & NO_PCB_STATS) )
 	{
 		if( num_parts_with_fp != num_parts )
-			s.LoadStringA(IDS_NumberOfParts),
-			line.Format( s, num_parts, num_parts-num_parts_with_fp );
+			line.Format( "Number of parts: %d (without footprints = %d)\n",
+			num_parts, num_parts-num_parts_with_fp );
 		else
-			s.LoadStringA(IDS_NumberOfParts2),
-			line.Format( s, num_parts );
+			line.Format( "Number of parts: %d\n", num_parts );
 		file.WriteString( line );
-		s.LoadStringA(IDS_NumberOfPins);
-		line.Format( s,	num_pins, num_th_pins, num_pins-num_th_pins );
+		line.Format( "Number of pins: %d (%d through-hole, %d SMT)\n", 
+			num_pins, num_th_pins, num_pins-num_th_pins );
 		file.WriteString( line );
 	}
-	CIterator_cnet iter_net(m_nl);
-	for( cnet * net = iter_net.GetFirst(); net; net=iter_net.GetNext() )
+	cnet * net = m_nl->GetFirstNet();
+	while( net )
 	{
 		num_nets++;
-		CIterator_cconnect iter_con(net);
-		for( cconnect * c=iter_con.GetFirst(); c; c=iter_con.GetNext() )
+		for( int ic=0; ic<net->nconnects; ic++ )
 		{
-			for( int iv=0; iv<c->vtx.GetSize(); iv++ )
+			for( int iv=0; iv<net->connect[ic].vtx.GetSize(); iv++ )
 			{
-				cvertex * v = &c->vtx[iv];
+				cvertex * v = &net->connect[ic].vtx[iv];
 				int hole_size = v->via_hole_w; 
 				if( hole_size > 0 )
 				{
@@ -248,21 +234,22 @@ void CDlgReport::OnBnClickedOk()
 				}
 			}
 		}
+		net = m_nl->GetNextNet();
 	}
 	if( !(m_flags & NO_PCB_STATS) )
 	{
-		s.LoadStringA(IDS_NumberOfVias);
-		line.Format( s, num_vias );
+		line.Format( "Number of vias: %d\n", num_vias );
 		file.WriteString( line );
-		s.LoadStringA(IDS_NumberOfHoles);
-		line.Format( s, num_vias + num_th_pins );
+		line.Format( "Number of holes: %d\n", num_vias + num_th_pins );
 		file.WriteString( line );
 	}
 
 	if( !(m_flags & NO_DRILL_LIST) )
 	{
-		s.LoadStringA(IDS_DrillList);
-		file.WriteString( s ); 
+		file.WriteString( "\nDrill list\n" );
+		file.WriteString( "==========\n" );
+		file.WriteString( "NUMBER  DIAMETER\n" );
+		file.WriteString( "------  --------\n" );
 		POSITION pos = hole_size_map.GetStartPosition();
 		int hole_size;
 		int num_holes;
@@ -335,22 +322,19 @@ void CDlgReport::OnBnClickedOk()
 		int maxlen_dot_x = 6;
 		int maxlen_dot_y = 6;
 		int dp;
-		CString s ((LPCSTR) IDS_PartList);
-		file.WriteString( s );
-		CString cw_str ((LPCSTR) IDS_Counterclockwise);
+		file.WriteString( "\nPart list\n" );   
+		file.WriteString(   "=========\n" );
+		CString cw_str = "CCW";
 		if( m_flags & CW )
-			cw_str.LoadStringA(IDS_Clockwise);
-		s.LoadStringA(IDS_ForPartsOnTopTheAngleIs);
-		line.Format( s, cw_str );
+			cw_str = "CW";
+		line.Format( "For parts on top: the angle is in degrees %s, as viewed from the top\n", cw_str );
 		file.WriteString( line );
 		if( m_flags & TOP )
-			s.LoadStringA(IDS_ForPartsOnTheBottomTheAngleIs);
+			line.Format( "For parts on the bottom: the angle is in degrees %s, as viewed from the top\n", cw_str );
 		else
-			s.LoadStringA(IDS_ForPartsOnTheBottomTheAngleIs2);
-		line.Format(s, cw_str );
+			line.Format( "For parts on the bottom: the angle is in degrees %s, as viewed from the bottom by flipping the PCB left-right\n", cw_str );
 		file.WriteString( line );
-		s.LoadStringA(IDS_AllCentroidCoordinatesAreAsViewedFromTheTop);
-		file.WriteString( s );
+		file.WriteString( "All centroid coordinates are as viewed from the top\n\n" );
 		if( m_units == MIL )
 			dp = 1;
 		else if( m_units == MM )
@@ -392,9 +376,9 @@ void CDlgReport::OnBnClickedOk()
 				str1.Format( "%d", nholes );
 				holes[ip] = str1;
 				if( part->side == 0 )
-					str1.LoadStringA(IDS_Top2);
+					str1 = "   top";
 				else
-					str1.LoadStringA(IDS_Bottom);
+					str1 = "bottom";
 				side[ip] = str1;
 				int a = ::GetReportedAngleForPart( part->angle, 
 				part->shape->m_centroid_angle, part->side );				
@@ -474,17 +458,15 @@ void CDlgReport::OnBnClickedOk()
 			maxlen_ref_des, maxlen_package, maxlen_value, maxlen_footprint, maxlen_pins, maxlen_holes,
 			maxlen_side, maxlen_angle, 
 			maxlen_c_x, maxlen_c_y, maxlen_p1_x, maxlen_p1_y );
-		CString dot_format_str, fields[15];
+		CString dot_format_str;
 		dot_format_str.Format( "  %%%ds  %%%ds  %%%ds", 
 				maxlen_dot_w, maxlen_dot_x, maxlen_dot_y );
-		for (int i=0; i<15; i++)
-			fields[i].LoadStringA(IDS_ReportFields+i);
-		str1.Format( format_str, fields[0], fields[1], fields[2], fields[3], fields[4], fields[5],
-			fields[6], fields[7], fields[8], fields[9], fields[10], fields[11] );
+		str1.Format( format_str, "REF", "PACKAGE", "VALUE", "FOOTPRINT", "PINS", "HOLES",
+			"SIDE", "ANGLE", "CENT X", "CENT Y", "PIN1 X", "PIN1 Y" );
 		for( int id=0; id<maxnum_dots; id++ ) 
 		{
 			CString temp;
-			temp.Format( dot_format_str, fields[12], fields[13], fields[14] );
+			temp.Format( dot_format_str, "GLUE W", "GLUE X", "GLUE Y" );
 			str1 += temp;
 		}
 		file.WriteString( str1 + "\n" );
@@ -515,69 +497,48 @@ void CDlgReport::OnBnClickedOk()
 	}
 	if( !(m_flags & NO_CAM_PARAMS) )  
 	{
-		CString s ((LPCSTR) IDS_GerberFileSettings);
-		file.WriteString( s );
-		CString str_SMT_connect ((LPCSTR) IDS_No);
-		CString str_board_outline ((LPCSTR) IDS_No);
-		CString str_moires ((LPCSTR) IDS_No);
-		CString str_layer_desc_text ((LPCSTR) IDS_No);
-		CString str_pilot_holes ((LPCSTR) IDS_No);
-		CString str_SMT_thermals ((LPCSTR) IDS_Yes);
-		CString str_pin_thermals ((LPCSTR) IDS_Yes);
-		CString str_via_thermals ((LPCSTR) IDS_Yes);
-		CString str_SM_cutouts_vias ((LPCSTR) IDS_No);
-		CString str_90_degree_thermals((LPCSTR) IDS_No);
+		file.WriteString( "\nGerber file settings\n" );
+		file.WriteString( "====================\n" );
+		CString str_SMT_connect = "NO";
+		CString str_board_outline = "NO";
+		CString str_moires = "NO";
+		CString str_layer_desc_text = "NO";
+		CString str_pilot_holes = "NO";
+		CString str_SMT_thermals = "YES";
+		CString str_pin_thermals = "YES";
+		CString str_via_thermals = "YES";
+		CString str_SM_cutouts_vias = "NO";
+		CString str_90_degree_thermals = "NO";
 		if( m_doc->m_cam_flags & GERBER_BOARD_OUTLINE )
-			str_board_outline.LoadStringA(IDS_Yes);
+			str_board_outline = "YES";
 		if( m_doc->m_cam_flags & GERBER_AUTO_MOIRES )
-			str_moires.LoadStringA(IDS_Yes);
+			str_moires = "YES";
 		if( m_doc->m_cam_flags & GERBER_LAYER_TEXT )
-			str_layer_desc_text.LoadStringA(IDS_Yes);
+			str_layer_desc_text = "YES";
 		if( m_doc->m_cam_flags & GERBER_PILOT_HOLES )
-			str_pilot_holes.LoadStringA(IDS_Yes);
+			str_pilot_holes = "YES";
 		if( m_doc->m_bSMT_copper_connect )
-			str_SMT_connect.LoadStringA(IDS_Yes);
+			str_SMT_connect = "YES";
 		if( m_doc->m_cam_flags & GERBER_NO_SMT_THERMALS )
-			str_SMT_thermals.LoadStringA(IDS_No);
+			str_SMT_thermals = "NO";
 		if( m_doc->m_cam_flags & GERBER_NO_PIN_THERMALS )
-			str_pin_thermals.LoadStringA(IDS_No);
+			str_pin_thermals = "NO";
 		if( m_doc->m_cam_flags & GERBER_NO_VIA_THERMALS )
-			str_via_thermals.LoadStringA(IDS_No);
+			str_via_thermals = "NO";
 		if( m_doc->m_cam_flags & GERBER_MASK_VIAS )
-			str_SM_cutouts_vias.LoadStringA(IDS_Yes);
+			str_SM_cutouts_vias = "YES";
 		if( m_doc->m_cam_flags & GERBER_90_THERMALS )
-			str_90_degree_thermals.LoadStringA(IDS_Yes);
-		CString line;
-		s.LoadStringA(IDS_IncludeBoardOutline);
-		line.Format(s, str_board_outline);
-		file.WriteString( line );
-		s.LoadStringA(IDS_IncludeMoires);
-		line.Format(s, str_moires);
-		file.WriteString( line );
-		s.LoadStringA(IDS_IncludeLayerDescriptionText);
-		line.Format(s, str_layer_desc_text);
-		file.WriteString( line );
-		s.LoadStringA(IDS_IncludePilotHoles);
-		line.Format(s, str_pilot_holes);
-		file.WriteString( line );
-		s.LoadStringA(IDS_ConnectSMTPinsToCopperAreas);
-		line.Format(s, str_SMT_connect);
-		file.WriteString( line );
-		s.LoadStringA(IDS_UseThermalsForSMTPins);
-		line.Format(s, str_SMT_thermals);
-		file.WriteString( line );
-		s.LoadStringA(IDS_UseThermalsForThroughHolePins);
-		line.Format(s, str_pin_thermals);
-		file.WriteString( line );
-		s.LoadStringA(IDS_UseThermalsForVias);
-		line.Format(s, str_via_thermals);
-		file.WriteString( line );
-		s.LoadStringA(IDS_MakeSolderMaskCutoutsForVias);
-		line.Format(s, str_SM_cutouts_vias);
-		file.WriteString( line );
-		s.LoadStringA(IDS_Use90DegreeThermalsForRoundPins);
-		line.Format(s, str_90_degree_thermals);
-		file.WriteString( line );
+			str_90_degree_thermals = "YES";
+		file.WriteString( "Include board outline: " + str_board_outline + "\n" );
+		file.WriteString( "Include moires: " + str_moires + "\n" );
+		file.WriteString( "Include layer description text: " + str_layer_desc_text + "\n" );
+		file.WriteString( "Include pilot holes: " + str_pilot_holes + "\n" );
+		file.WriteString( "Connect SMT pins to copper areas: " + str_SMT_connect + "\n" );
+		file.WriteString( "Use thermals for SMT pins: " + str_SMT_thermals + "\n" );
+		file.WriteString( "Use thermals for through-hole pins: " + str_pin_thermals + "\n" );
+		file.WriteString( "Use thermals for vias: " + str_via_thermals + "\n" );
+		file.WriteString( "Make solder-mask cutouts for vias: " + str_SM_cutouts_vias + "\n" );
+		file.WriteString( "Use 90-degree thermals for round pins: " + str_90_degree_thermals + "\n" );
 		CString str_fill_clearance;
 		CString str_mask_clearance;
 		CString str_paste_shrink;
@@ -615,108 +576,66 @@ void CDlgReport::OnBnClickedOk()
 			m_units, TRUE, FALSE, TRUE, dp );
 		::MakeCStringFromDimension( &str_annular_ring_vias, m_doc->m_annular_ring_vias,
 			m_units, TRUE, FALSE, TRUE, dp );
-		s.LoadStringA(IDS_CopperToCopperFillClearance);
-		line.Format(s, str_fill_clearance);
-		file.WriteString( line );
-		s.LoadStringA(IDS_HoleEdgeToCopperFillClearance);
-		line.Format(s, str_hole_clearance);
-		file.WriteString( line );
-		s.LoadStringA(IDS_SolderMaskClearance);
-		line.Format(s, str_mask_clearance);
-		file.WriteString( line );
-		s.LoadStringA(IDS_PilotHoleDiameter);
-		line.Format(s, str_pilot_diameter);
-		file.WriteString( line );
-		s.LoadStringA(IDS_MinimumSilkscreenLineWidth);
-		line.Format(s, str_min_silkscreen_stroke_wid);
-		file.WriteString( line );
-		s.LoadStringA(IDS_ThermalReliefLineWidth);
-		line.Format(s, str_thermal_width);
-		file.WriteString( line );
-		s.LoadStringA(IDS_BoardOutlineLineWidth);
-		line.Format(s, str_outline_width);
-		file.WriteString( line );
-		s.LoadStringA(IDS_MinimumAnnularRingWidthPins);
-		line.Format(s, str_annular_ring_pins);
-		file.WriteString( line );
-		s.LoadStringA(IDS_MinimumAnnularRingWidthVias);
-		line.Format(s, str_annular_ring_vias);
-		file.WriteString( line );
-		s.LoadStringA(IDS_AmountToShrinkSMTPadsForPasteMask);
-		line.Format(s, str_paste_shrink);
-		file.WriteString( line );
+		file.WriteString( "Copper to copper-fill clearance: " + str_fill_clearance + "\n" );
+		file.WriteString( "Hole-edge to copper-fill clearance: " + str_hole_clearance + "\n" );
+		file.WriteString( "Solder mask clearance: " + str_mask_clearance + "\n" );
+		file.WriteString( "Pilot hole diameter: " + str_pilot_diameter + "\n" );
+		file.WriteString( "Minimum silkscreen line width: " + str_min_silkscreen_stroke_wid + "\n" );
+		file.WriteString( "Thermal relief line width: " + str_thermal_width + "\n" );
+		file.WriteString( "Board outline line width: " + str_outline_width + "\n" );
+		file.WriteString( "Minimum annular ring width (pins): " + str_annular_ring_pins + "\n" );
+		file.WriteString( "Minimum annular ring width (vias): " + str_annular_ring_vias + "\n" );
+		file.WriteString( "Amount to shrink SMT pads for paste mask: " + str_paste_shrink + "\n" );
 	}
 	if( !(m_flags & NO_DRC_PARAMS) )  
 	{
-		CString s ((LPCSTR) IDS_DRCSettings);
-		file.WriteString( s );
+		file.WriteString( "\nDRC settings\n" );
+		file.WriteString( "============\n" );
 		CString str_min_trace_width;
 		::MakeCStringFromDimension( &str_min_trace_width, m_doc->m_dr.trace_width,
 			m_units, TRUE, FALSE, TRUE, dp ); 
-		s.LoadStringA(IDS_MinimumTraceWidth);
-		line.Format(s, str_min_trace_width);
-		file.WriteString( line );
+		file.WriteString( "Minimum trace width: " + str_min_trace_width + "\n" );
 		CString str_min_pad_pad;
 		::MakeCStringFromDimension( &str_min_pad_pad, m_doc->m_dr.pad_pad,
 			m_units, TRUE, FALSE, TRUE, dp ); 
-		s.LoadStringA(IDS_MinimumPadToPadClearance);
-		line.Format(s, str_min_pad_pad);
-		file.WriteString( line );
+		file.WriteString( "Minimum pad to pad clearance: " + str_min_pad_pad + "\n" );
 		CString str_min_pad_trace;
 		::MakeCStringFromDimension( &str_min_pad_trace, m_doc->m_dr.pad_trace,
 			m_units, TRUE, FALSE, TRUE, dp ); 
-		s.LoadStringA(IDS_MinimumPadToTraceClearance);
-		line.Format(s, str_min_pad_trace);
-		file.WriteString( line );
+		file.WriteString( "Minimum pad to trace clearance: " + str_min_pad_trace + "\n" );
 		CString str_min_trace_trace;
 		::MakeCStringFromDimension( &str_min_trace_trace, m_doc->m_dr.trace_trace,
 			m_units, TRUE, FALSE, TRUE, dp ); 
-		s.LoadStringA(IDS_MinimumTraceToTraceClearance);
-		line.Format(s, str_min_trace_trace);
-		file.WriteString( line );
+		file.WriteString( "Minimum trace to trace clearance: " + str_min_trace_trace + "\n" );
 		CString str_min_hole_copper;
 		::MakeCStringFromDimension( &str_min_hole_copper, m_doc->m_dr.hole_copper,
-			m_units, TRUE, FALSE, TRUE, dp );
-		s.LoadStringA(IDS_MinimumHoleToCopperClearance);
-		line.Format(s, str_min_hole_copper);
-		file.WriteString( line );
+			m_units, TRUE, FALSE, TRUE, dp ); 
+		file.WriteString( "Minimum hole to copper clearance: " + str_min_hole_copper + "\n" );
 		CString str_min_hole_hole;
 		::MakeCStringFromDimension( &str_min_hole_hole, m_doc->m_dr.hole_hole,
-			m_units, TRUE, FALSE, TRUE, dp );
-		s.LoadStringA(IDS_MinimumHoleToHoleClearance);
-		line.Format(s, str_min_hole_hole);
-		file.WriteString( line );
+			m_units, TRUE, FALSE, TRUE, dp ); 
+		file.WriteString( "Minimum hole to hole clearance: " + str_min_hole_hole + "\n" );
 		CString str_min_annular_ring_pins;
 		::MakeCStringFromDimension( &str_min_annular_ring_pins, m_doc->m_dr.annular_ring_pins,
-			m_units, TRUE, FALSE, TRUE, dp );
-		s.LoadStringA(IDS_MinimumAnnularRingPins);
-		line.Format(s, str_min_annular_ring_pins);
-		file.WriteString( line );
+			m_units, TRUE, FALSE, TRUE, dp ); 
+		file.WriteString( "Minimum annular ring (pins): " + str_min_annular_ring_pins + "\n" );
 		CString str_min_annular_ring_vias;
 		::MakeCStringFromDimension( &str_min_annular_ring_vias, m_doc->m_dr.annular_ring_vias,
 			m_units, TRUE, FALSE, TRUE, dp ); 
-		s.LoadStringA(IDS_MinimumAnnularRingVias);
-		line.Format(s, str_min_annular_ring_vias);
-		file.WriteString( line );
+		file.WriteString( "Minimum annular ring (vias): " + str_min_annular_ring_vias + "\n" );
 		CString str_min_board_edge_copper;
 		::MakeCStringFromDimension( &str_min_board_edge_copper, m_doc->m_dr.board_edge_copper,
 			m_units, TRUE, FALSE, TRUE, dp ); 
-		s.LoadStringA(IDS_MinimumBoardEdgeToCopperClearance);
-		line.Format(s, str_min_board_edge_copper);
-		file.WriteString( line );
+		file.WriteString( "Minimum board edge to copper clearance: " + str_min_board_edge_copper + "\n" );
 		CString str_min_board_edge_hole;
 		::MakeCStringFromDimension( &str_min_board_edge_hole, m_doc->m_dr.board_edge_hole,
 			m_units, TRUE, FALSE, TRUE, dp ); 
-		s.LoadStringA(IDS_MinimumBoardEdgeToHoleClearance);
-		line.Format(s, str_min_board_edge_hole);
-		file.WriteString( line );
+		file.WriteString( "Minimum board edge to hole clearance: " + str_min_board_edge_hole + "\n" );
 		CString str_min_copper_copper;
 		::MakeCStringFromDimension( &str_min_copper_copper, m_doc->m_dr.copper_copper,
 			m_units, TRUE, FALSE, TRUE, dp ); 
-		s.LoadStringA(IDS_MinimumCopperAreaToCopperAreaClearance);
-		line.Format(s, str_min_copper_copper);
-		file.WriteString( line );
-		}
+		file.WriteString( "Minimum copper area to copper area clearance: " + str_min_copper_copper + "\n" );
+	}
 	if( m_flags & (DRC_LIST | CONNECTIVITY_LIST) )
 	{
 		BOOL bDrc = m_flags & DRC_LIST;
@@ -729,8 +648,8 @@ void CDlgReport::OnBnClickedOk()
 			&m_doc->m_board_outline, &dr, m_doc->m_drelist );
 		if( bDrc )
 		{
-			CString s ((LPCSTR) IDS_DRCErrors);
-			file.WriteString( s );
+			file.WriteString( "\nDRC errors\n" );
+			file.WriteString( "==========\n" );
 		}
 		else
 		{
@@ -739,12 +658,12 @@ void CDlgReport::OnBnClickedOk()
 		for( pos = m_doc->m_drelist->list.GetHeadPosition(); pos != NULL; )
 		{
 			DRError * dre = (DRError*)m_doc->m_drelist->list.GetNext( pos );
-			CString str = dre->str, s ((LPCSTR) IDS_RoutedConnectionFrom);
-			BOOL bConError = (str.Find( s ) != -1);
+			CString str = dre->str;
+			BOOL bConError = (str.Find( "routed connection from" ) != -1);
 			if( bConError && bCon && !bConHeading )
 			{
-				s.LoadStringA(IDS_ConnectivityErrors);
-				file.WriteString( s );
+				file.WriteString( "\nConnectivity errors\n" );
+				file.WriteString( "===================\n" );
 				bConHeading = TRUE;
 			}
 			if( bCon && bConError || bDrc && !bConError )

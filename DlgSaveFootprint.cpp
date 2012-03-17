@@ -114,8 +114,8 @@ void CDlgSaveFootprint::OnBnClickedOk()
 		if( ret == -1 )
 		{
 			// folder doesn't exist
-			CString s ((LPCSTR) IDS_FolderDoesntExistCreateIt), mess;
-			mess.Format(s, m_folder_name);
+			CString mess = "Folder \"" + m_folder_name + "\" doesn't exist\n";
+			mess += "Create it ?";
 			ret = AfxMessageBox( mess, MB_YESNO );
 			if( ret == IDNO )
 				return;
@@ -124,16 +124,16 @@ void CDlgSaveFootprint::OnBnClickedOk()
 			if( ret == -1 )
 			{
 				// can't create folder
-				s.LoadStringA(IDS_UnableToCreateFolder);
-				mess.Format(s, m_folder_name);
+				CString mess = "Unable to create folder \"";
+				mess += m_folder_name;
 				AfxMessageBox( mess );
 				return;
 			}
 		}
 		// index folder
 		CFootLibFolder * new_folder = new CFootLibFolder;
-		CString mess, s ((LPCSTR) IDS_IndexingLibraryFolder);
-		mess.Format( s, m_folder_name );
+		CString mess;
+		mess.Format( "Indexing library folder \"%s\"\r\n", m_folder_name );
 		m_dlg_log->AddLine( mess );
 		new_folder->IndexAllLibs( &m_folder_name, m_dlg_log );
 		m_dlg_log->AddLine( "\r\n" );
@@ -146,8 +146,9 @@ void CDlgSaveFootprint::OnBnClickedOk()
 	m_name.Replace( '\"', '\'' );			// replace any " with '
 	if( m_name.GetLength() > CShape::MAX_NAME_SIZE )
 	{
-		CString s ((LPCSTR) IDS_NameTooLong), mess;
-		mess.Format( s,	CShape::MAX_NAME_SIZE );
+		CString mess;
+		mess.Format( "Name too long, can't exceed %d characters",
+			CShape::MAX_NAME_SIZE );
 		AfxMessageBox( mess );
 		return;
 	}
@@ -185,8 +186,9 @@ void CDlgSaveFootprint::OnBnClickedOk()
 	if( footprint_exists && same_file )
 	{
 		// footprint name already exists in this file
-		CString mess, s ((LPCSTR) IDS_FootprintAlreadyExistsInFile);
-		mess.Format( s,	m_name, fn );
+		CString mess;
+		mess.Format( "Footprint \"%s\" already exists in file \"%s\"\nOverwrite ?",
+			m_name, fn );
 		int ret = AfxMessageBox( mess, MB_OKCANCEL );
 		if( ret == IDOK )
 		{
@@ -198,8 +200,9 @@ void CDlgSaveFootprint::OnBnClickedOk()
 	else if( footprint_exists && !same_file )
 	{
 		// footprint name already exists in another file
-		CString mess, s ((LPCSTR) IDS_FootprintAlreadyExistsInAnotherLibrary);
-		mess.Format( s,	m_name, fn );
+		CString mess;
+		mess.Format( "Footprint \"%s\" already exists in another library file \"%s\"\nDo you want to change the name?",
+			m_name, fn );
 		int ret = AfxMessageBox( mess, MB_YESNO );
 		if( ret == IDYES )
 		{
@@ -216,9 +219,7 @@ void CDlgSaveFootprint::OnBnClickedOk()
 		BOOL ok = f.Open( file_path, CFile::modeCreate | CFile::modeWrite );
 		if( !ok )
 		{
-			CString s ((LPCSTR) IDS_UnableToOpenFile), mess;
-			mess.Format(s, file_path);
-			AfxMessageBox( mess );
+			AfxMessageBox( "Unable to open file " + file_path );
 			return;
 		}
 		m_footprint->WriteFootprint( &f );
@@ -256,8 +257,10 @@ void CDlgSaveFootprint::OnBnClickedOk()
 		int err = remove( file_path );
 		if( err )
 		{
-			CString s ((LPCSTR) IDS_FileSystemErrorUnableToModifyLibrary);
-			AfxMessageBox( s );
+			CString str = "File system error: Unable to modify library file\n";
+			str += "File could be read-only or you don't have permission to modify it\n";
+			str += "The modified file has been saved as \"temp.txt\"";
+			AfxMessageBox( str );
 			return;
 		}
 		else
@@ -265,8 +268,10 @@ void CDlgSaveFootprint::OnBnClickedOk()
 			err = rename( "temp.txt", file_path );
 			if( err )
 			{
-				CString s ((LPCSTR) IDS_FileSystemErrorUnableToModifyLibrary2);
-				AfxMessageBox( s );
+				CString str = "File system error: Unable to modify library file\n";
+				str += "The original file has been deleted but can't be rewritten\n";
+				str += "The modified file has been saved as \"temp.txt\"";
+				AfxMessageBox( str );
 				return;
 			}
 		}
@@ -321,8 +326,10 @@ void CDlgSaveFootprint::OnBnClickedOk()
 		int err = remove( file_path );
 		if( err )
 		{
-			CString s ((LPCSTR) IDS_FileSystemErrorUnableToModifyLibrary);
-			AfxMessageBox( s );
+			CString str = "File system error: Unable to modify library file\n";
+			str += "File could be read-only or you don't have permission to modify it\n";
+			str += "The modified file has been saved as \"temp.txt\"";
+			AfxMessageBox( str );
 			return;
 		}
 		else
@@ -330,8 +337,10 @@ void CDlgSaveFootprint::OnBnClickedOk()
 			err = rename( "temp.txt", file_path );
 			if( err )
 			{
-				CString s ((LPCSTR) IDS_FileSystemErrorUnableToModifyLibrary2);
-				AfxMessageBox( s );
+				CString str = "File system error: Unable to modify library file\n";
+				str += "The original file has been deleted but can't be rewritten\n";
+				str += "The modified file has been saved as \"temp.txt\"";
+				AfxMessageBox( str );
 				return;
 			}
 		}
@@ -343,8 +352,7 @@ void CDlgSaveFootprint::OnBnClickedOk()
 
 void CDlgSaveFootprint::OnBnClickedButtonBrowse()
 {
-	CString s ((LPCSTR) IDS_OpenFolder), s2 ((LPCSTR) IDS_SelectFootprintLibraryFolder);
-	CPathDialog dlg( s, s2, *m_folder->GetFullPath() );
+	CPathDialog dlg( "Open Folder", "Select footprint library folder", *m_folder->GetFullPath() );
 	int ret = dlg.DoModal();
 	if( ret == IDOK )
 	{
@@ -354,8 +362,8 @@ void CDlgSaveFootprint::OnBnClickedButtonBrowse()
 		if( !m_folder )
 		{
 			CFootLibFolder * new_folder = new CFootLibFolder;
-			CString s ((LPCSTR) IDS_IndexingLibraryFolder), mess;
-			mess.Format( s, path_str );
+			CString mess;
+			mess.Format( "Indexing library folder \"%s\"\r\n", path_str );
 			m_dlg_log->AddLine( mess );
 			new_folder->IndexAllLibs( &path_str, m_dlg_log );
 			m_dlg_log->AddLine( "\r\n" );

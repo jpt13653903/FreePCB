@@ -55,9 +55,8 @@ int RunConsoleProcess( LPCTSTR commandLine, CDlgLog * log )
 		hProcess = SpawnAndRedirect(commandLine, &hOutput, NULL); 
 		if (!hProcess) 
 		{
-			CString s ((LPCSTR) IDS_Failed);
 			if( log )
-				log->AddLine( s );
+				log->AddLine( "Failed!\r\n" );
 			return 1;
 		}
 

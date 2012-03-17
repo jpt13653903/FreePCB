@@ -262,6 +262,10 @@
 				>
 			</File>
 			<File
+				RelativePath="DlgAddPoly.h"
+				>
+			</File>
+			<File
 				RelativePath="DlgAddText.cpp"
 				>
 			</File>
@@ -315,6 +319,10 @@
 			</File>
 			<File
 				RelativePath=".\DlgFindPart.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\DlgFpRefText.cpp"
 				>
 			</File>
 			<File
@@ -450,10 +458,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\ellipse_newton.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\file_io.cpp"
 				>
 			</File>
@@ -491,10 +495,6 @@
 			</File>
 			<File
 				RelativePath="ivex_mod_file.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\layers.cpp"
 				>
 			</File>
 			<File
@@ -635,10 +635,6 @@
 				>
 			</File>
 			<File
-				RelativePath="DlgAddPoly.h"
-				>
-			</File>
-			<File
 				RelativePath="DlgAddText.h"
 				>
 			</File>
@@ -692,6 +688,10 @@
 			</File>
 			<File
 				RelativePath=".\DlgFindPart.h"
+				>
+			</File>
+			<File
+				RelativePath=".\DlgFpRefText.h"
 				>
 			</File>
 			<File
@@ -820,10 +820,6 @@
 			</File>
 			<File
 				RelativePath="DlgWizQuad.h"
-				>
-			</File>
-			<File
-				RelativePath=".\ellipse_newton.h"
 				>
 			</File>
 			<File

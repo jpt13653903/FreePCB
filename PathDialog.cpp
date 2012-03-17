@@ -264,6 +264,20 @@ BOOL CPathDialog::IsFileNameValid(LPCTSTR lpFileName)
 	return TRUE;
 }
 
+const TCHAR c_FolderDoesNotExist[] = _T(
+		"The folder:\n\n"
+		"%s\n\n"
+		"does not exist. Do you want the folder to be created?");
+const TCHAR c_szErrInvalidPath[] = _T(
+		"The folder:"
+		"\n\n"
+		"%s\n\n"
+		"is invalid. Please reenter.");
+const TCHAR c_szErrCreatePath[] = _T(
+		"The folder:"
+		"\n\n"
+		"%s"
+		"\n\ncan not be created. Please double check.");
 
 //return -1: user break;
 //return 0: no error
@@ -287,8 +301,7 @@ int CPathDialog::MakeSurePathExists(LPCTSTR lpPath)
 			return (int)0;
 		}
 
-		CString s ((LPCSTR) IDS_TheFolderDoesNotExist);
-		strMsg.Format(s, lpPath);
+		strMsg.Format(c_FolderDoesNotExist, lpPath);
 		if(AfxMessageBox(strMsg, MB_YESNO|MB_ICONQUESTION) != IDYES)
 		{
 			return (int)-1;
@@ -305,17 +318,14 @@ int CPathDialog::MakeSurePathExists(LPCTSTR lpPath)
 	}
 	catch(int nErrCode)
 	{
-		CString s1 ((LPCSTR) IDS_TheFolderIsInvalid);
-		CString s2 ((LPCSTR) IDS_TheFolderCanNotBeCreated);
-		
 		switch(nErrCode)
 		{
 		case 1:
-			strMsg.Format(s1, lpPath);
+			strMsg.Format(c_szErrInvalidPath, lpPath);
 			break;
 		case 2:
 		default:
-			strMsg.Format(s2, lpPath);
+			strMsg.Format(c_szErrCreatePath, lpPath);
 			break;
 		}
 

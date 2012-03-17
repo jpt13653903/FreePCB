@@ -48,8 +48,7 @@ void CFootLibFolder::IndexLib( CString * file_name, CDlgLog * dlog )
 	if( !OK && !bDisableMessageIfFileNotFound )     
 	{
 		CDlgMyMessageBox dlg;
-		CString s ((LPCSTR) IDS_UnableToOpenLibraryFile), mess;
-		mess.Format(s, m_footlib[nlib].m_full_path);
+		CString mess = "Unable to open library file\n\n \"" + m_footlib[nlib].m_full_path + "\"";
 		dlg.Initialize( mess );
 		dlg.DoModal();
 		bDisableMessageIfFileNotFound = dlg.bDontShowBoxState;
@@ -110,8 +109,8 @@ void CFootLibFolder::IndexAllLibs( CString * full_path, CDlgLog * dlg_log )
 	CFileFind finder;
 	if( _chdir( m_full_path_to_folder ) != 0 )
 	{
-		CString mess, s ((LPCSTR) IDS_UnableToOpenLibraryFolder);
-		mess.Format( s, m_full_path_to_folder );
+		CString mess;
+		mess.Format( "Unable to open library folder \"%s\"", m_full_path_to_folder );
 		AfxMessageBox( mess );
 	}
 	else
@@ -129,8 +128,8 @@ void CFootLibFolder::IndexAllLibs( CString * full_path, CDlgLog * dlg_log )
 			if( !finder.IsDirectory() ) 
 			{
 				// found a library file, index it
-				CString log_message, s ((LPCSTR) IDS_IndexingLibrary);
-				log_message.Format( s, fn );
+				CString log_message;
+				log_message.Format( "Indexing library: \"%s\"\r\n", fn );
 				dlg_log->AddLine( log_message );
 				IndexLib( &fn );
 			}
@@ -337,8 +336,8 @@ CFootLibFolder * CFootLibFolderMap::GetFolder( CString * full_path, CDlgLog * lo
 	if( !m_folder_map.Lookup( str, ptr ) || ptr == NULL )
 	{
 		folder = new CFootLibFolder();
-		CString mess, s ((LPCSTR) IDS_IndexingLibrary);
-		mess.Format( s, str );
+		CString mess;
+		mess.Format( "Indexing library folder \"%s\"\r\n", str );
 		log->AddLine( mess );
 		folder->IndexAllLibs( &str, log );
 		log->AddLine( "\r\n" );

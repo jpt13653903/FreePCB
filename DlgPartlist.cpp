@@ -141,15 +141,11 @@ void CDlgPartlist::DrawListCtrl()
 	DWORD old_style = m_list_ctrl.GetExtendedStyle();
 	m_list_ctrl.SetExtendedStyle( LVS_EX_FULLROWSELECT | LVS_EX_FLATSB | LVS_EX_CHECKBOXES | old_style );
 	m_list_ctrl.DeleteAllItems();
-	CString colNames[5];
-	for (int i=0; i<5; i++)
-		colNames[i].LoadStringA(IDS_PartListCols+i);
-
-	m_list_ctrl.InsertColumn( COL_VIS, colNames[0], LVCFMT_LEFT, 60 );
-	m_list_ctrl.InsertColumn( COL_NAME, colNames[1], LVCFMT_LEFT, 70 );
-	m_list_ctrl.InsertColumn( COL_PACKAGE, colNames[2], LVCFMT_LEFT, 150 );
-	m_list_ctrl.InsertColumn( COL_FOOTPRINT, colNames[3], LVCFMT_LEFT, 150 );
-	m_list_ctrl.InsertColumn( COL_VALUE, colNames[4], LVCFMT_LEFT, 200 );
+	m_list_ctrl.InsertColumn( COL_VIS, "Value Vis", LVCFMT_LEFT, 60 );
+	m_list_ctrl.InsertColumn( COL_NAME, "Reference", LVCFMT_LEFT, 70 );
+	m_list_ctrl.InsertColumn( COL_PACKAGE, "Package", LVCFMT_LEFT, 150 );
+	m_list_ctrl.InsertColumn( COL_FOOTPRINT, "Footprint", LVCFMT_LEFT, 150 );
+	m_list_ctrl.InsertColumn( COL_VALUE, "Value", LVCFMT_LEFT, 200 );
 	for( int i=0; i<::pl.GetSize(); i++ )
 	{
 		lvitem.mask = LVIF_TEXT | LVIF_PARAM;
@@ -196,10 +192,8 @@ void CDlgPartlist::OnBnClickedButtonEdit()
 	}
 	// edit selected part(s)
 	int n_sel = m_list_ctrl.GetSelectedCount();
-	if( n_sel == 0 ) {
-		CString s ((LPCSTR) IDS_YouHaveNoPartSelected);
-		AfxMessageBox( s );
-		}
+	if( n_sel == 0 )
+		AfxMessageBox( "You have no part selected" );
 	BOOL bMultiple = FALSE;
 	if( n_sel > 1 )
 		bMultiple = TRUE;
@@ -215,8 +209,7 @@ void CDlgPartlist::OnBnClickedButtonEdit()
 					+ MSK_VALUE * m_check_value.GetCheck(); 
 	if( bMultiple && multiple_mask == 0 )
 	{
-		CString s ((LPCSTR) IDS_ToEditMultipleParts);
-		AfxMessageBox( s );
+		AfxMessageBox( "To edit multiple parts, please select Footprint, Package or Value" );
 		return;
 	}
 	dlg.Initialize( &::pl, i, FALSE, FALSE, bMultiple, multiple_mask,
@@ -275,10 +268,8 @@ void CDlgPartlist::OnBnClickedButtonAdd()
 void CDlgPartlist::OnBnClickedButtonDelete()
 {
 	int n_sel = m_list_ctrl.GetSelectedCount();
-	if( n_sel == 0 ) {
-		CString s ((LPCSTR) IDS_YouHaveNoPartSelected);
-		AfxMessageBox( s );
-		}
+	if( n_sel == 0 )
+		AfxMessageBox( "You have no part selected" );
 	else
 	{
 		while( m_list_ctrl.GetSelectedCount() )

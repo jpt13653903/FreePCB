@@ -43,16 +43,14 @@ void CDlgDupFootprintName::DoDataExchange(CDataExchange* pDX)
 			if( m_new_name_str == "" )
 			{
 				// blank name
-				CString s ((LPCSTR) IDS_YouMustEnterANewFootprintName);
-				AfxMessageBox( s );
+				AfxMessageBox( "You must enter a new footprint name" );
 				pDX->Fail();
 			}
 			void * ptr;
 			if( m_footprint_cache_map->Lookup( m_new_name_str, ptr ) )
 			{
 				// blank name
-				CString s ((LPCSTR) IDS_NewFootprintNameIsAlreadyInUse);
-				AfxMessageBox( s );
+				AfxMessageBox( "New footprint name is already in use" );
 				pDX->Fail();
 			}
 		}

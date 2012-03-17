@@ -1,7 +1,7 @@
-#pragma once
-
 // definition of ID structure used by FreePCB
 //
+#pragma once
+
 // struct id : this structure is used to identify PCB design elements
 // such as instances of parts or nets, and their subelements
 // Each element will have its own id.
@@ -15,75 +15,35 @@
 //		id.i	= subelement index (zero-based)
 //		id.sst	= subelement of subelement (e.g. net connection segment)
 //		id.ii	= subsubelement index (zero-based)
-//		id.uid		= uid for element
-//		id.st_uid	= uid for subelement
-//		id.sst_uid	= uid for subsubelement
 //
-// For example, the id for segment 0 of connection 4 of a net would be
-//	id = { ID_NET, ID_CONNECT, 4, ID_SEG, 0, 
-//			UID of net, UID of connection, UID of segment };
+// For example, the id for segment 0 of connection 4 of net 12 would be
+//	id = { ID_NET, 12, ID_CONNECT, 4, ID_SEG, 0 };
 //
 //
-#include "Cuid.h"
-
-static Cuid pcb_cuid;	// global UID generator
-
 class id {
 public:
 	// constructor
-	id( int qtype=0, int qst=0, int qi=0, int qsst=0, int qii=0,
-		int quid=-1, int qst_uid=-1, int qsst_uid=-1 ) 
-	{ 
-		type = qtype; 
-		st = qst; 
-		i = qi; 
-		sst = qsst; 
-		ii = qii; 
-		uid = quid;
-		st_uid = qst_uid;
-		sst_uid = qsst_uid;
-	} 
+	id( int qt=0, int qst=0, int qis=0, int qsst=0, int qiis=0 ) 
+	{ type=qt; st=qst; i=qis; sst=qsst; ii=qiis; } 
 	// operators
-	friend BOOL operator ==(id id1, id id2)
+	friend int operator ==(id id1, id id2)
 	{ return (id1.type==id2.type 
 			&& id1.st==id2.st 
 			&& id1.sst==id2.sst 
 			&& id1.i==id2.i 
-			&& id1.ii==id2.ii 
-			&& id1.uid==id2.uid 
-			&& id1.st_uid==id2.st_uid 
-			&& id1.sst_uid==id2.sst_uid 
-			); 
+			&& id1.ii==id2.ii ); 
 	}
 	// member functions
 	void Clear() 
-	{ 
-		type = 0; st = 0; i = 0; sst = 0; ii = 0; 
-		uid=-1; st_uid=-1; sst_uid=-1;
-	} 
-	void Set(int qtype=0, int qst=0, int qi=0, int qsst=0, int qii=0,
-		int quid=-1, int qst_uid=-1, int qsst_uid=-1 ) 
-	{ 
-	{ 
-		type = qtype; 
-		st = qst; 
-		i = qi; 
-		sst = qsst; 
-		ii = qii; 
-		uid = quid;
-		st_uid = qst_uid;
-		sst_uid = qsst_uid;
-	} 
-	} 
+	{ type=0; st=0; i=0; sst=0; ii=0; } 
+	void Set( int qt, int qst=0, int qis=0, int qsst=0, int qiis=0 ) 
+	{ type=qt; st=qst; i=qis; sst=qsst; ii=qiis; } 
 	// member variables
 	unsigned int type;	// type of element
 	unsigned int st;	// type of subelement
 	unsigned int i;		// index of subelement
 	unsigned int sst;	// type of subsubelement
 	unsigned int ii;	// index of subsubelement
-	unsigned int uid;		// UID of element
-	unsigned int st_uid;	// UID of subelement
-	unsigned int sst_uid;	// UID of subsubelement
 };
 
 
@@ -113,8 +73,7 @@ enum {
 	ID_ORIG,		// part origin
 	ID_SEL_RECT,	// selection rectangle for part
 	ID_SEL_REF_TXT,		// selection rectangle for ref text
-	ID_SEL_VALUE_TXT,	// selection rectangle for value text
-	ID_SEL_FP_TEXT		// selection rectangle for text in FP
+	ID_SEL_VALUE_TXT	// selection rectangle for value text
 };
 
 // subtypes of ID_TEXT
