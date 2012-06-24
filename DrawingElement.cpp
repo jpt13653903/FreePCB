@@ -1,45 +1,46 @@
 #include "stdafx.h"
 #include "DrawingElement.h"
 
+extern CFreePcbApp theApp;
 
-void dl_element::Draw(CDrawInfo const &di) const
-{
-	if( visible && dlist->m_vis[ orig_layer ] ) 
-		_Draw(di);
-}
+void dl_element::Draw (CDrawInfo &di)
+	{ if( visible && dlist->m_vis[ orig_layer ] ) _Draw(di, false);	}
 
-
-void dl_element::DrawThermalRelief(CDrawInfo const &di) const
-{
-	if( visible && dlist->m_vis[ orig_layer ] ) _DrawThermalRelief(di);
-}
+void dl_element::DrawThermalRelief(CDrawInfo &di)
+	{ if( visible && dlist->m_vis[ orig_layer ] ) _DrawThermalRelief(di); }
 
 
-int dl_element::isHit(CPoint const &point) const
+int dl_element::isHit(double x, double y, double &d) 
 {
 	// don't select anything on an invisible layer or element
-	if( visible && dlist->m_vis[layer] ) return _isHit(point);
-	else return 0;
+	// CPT r294: changed args.
+	if( visible && dlist->m_vis[layer] )
+		return _isHit(x, y, d);
+	else 
+		return 0;
 }
 
 
-void dl_element::Remove(void)
+void dl_element::Unhook(void)
 {
-	if( this == NULL ) return;
-
-	dlist->Remove(this);
+	// CPT.  New system replacing Brian's.  Element unhooks itself from its doubly linked list (the head of which is in this->displayLayer->elements).
+	if (displayLayer->elements==this)
+		displayLayer->elements = next;
+	else 
+		prev->next = next;
+	if (next) 
+		next->prev = prev;
 }
 
 
-
-int CDLE_Symmetric::onScreen(void) const
+int CDLE_Symmetric::onScreen(void) 
 {
 	int sz = w/2;
 	return (    i.x-sz < dlist->m_max_x && i.x+sz > dlist->m_org_x
 	         && i.y-sz < dlist->m_max_y && i.y+sz > dlist->m_org_y );
 }
 
-int CDLE_Symmetric::_getBoundingRect(CRect &rect) const
+int CDLE_Symmetric::_getBoundingRect(CRect &rect) 
 {
 	int sz = w/2 + clearancew;
 
@@ -53,7 +54,7 @@ int CDLE_Symmetric::_getBoundingRect(CRect &rect) const
 
 
 
-int CDLE_Rectangular::onScreen(void) const
+int CDLE_Rectangular::onScreen(void) 
 {
     int _xi = i.x;
     int _yi = i.y;
@@ -76,7 +77,7 @@ int CDLE_Rectangular::onScreen(void) const
 }
 
 
-int CDLE_Rectangular::_getBoundingRect(CRect &rect) const
+int CDLE_Rectangular::_getBoundingRect(CRect &rect) 
 {
 	int sz = clearancew;
 
@@ -105,7 +106,7 @@ int CDLE_Rectangular::_getBoundingRect(CRect &rect) const
 }
 
 
-void CDLE_Rectangular::_DrawThermalRelief(CDrawInfo const &di) const
+void CDLE_Rectangular::_DrawThermalRelief(CDrawInfo  &di) 
 {
 	CFreePcbDoc * doc = theApp.m_Doc;
 
