@@ -1,0 +1,32 @@
+#
+# .hgignore
+#
+# FreePCB project
+#
+
+#####################################################################
+# globs
+syntax: glob
+
+# builds
+Debug/*
+Release/*
+
+# Visual Studio upgrades
+UpgradeLog.XML
+_UpgradeReport_Files/*
+
+# Visual Studio files
+*.sdf
+*.opensdf
+*.suo
+*.vcxproj.user
+ipch/*
+
+# Vim detritus
+*~
+*.swp
+
+#####################################################################
+# regexes
+syntax: regex

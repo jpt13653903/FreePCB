@@ -2,7 +2,7 @@
 //  or project specific include files that are used frequently, but
 //      are changed infrequently
 // 
-#define WINVER 0x400
+#define WINVER 0x500
 #define _WIN32_IE 0x0500 
 #define OPENFILENAME_SIZE_VERSION_400 0
 
