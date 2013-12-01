@@ -264,6 +264,8 @@ public:
 	CPoint PCBToScreen( CPoint point );
 	CPoint WindowToPCB( CPoint point );
 
+	CPoint ViewportCenterPCB(); // return the viewpoint center in PCB coords
+
 	// set element parameters
 	void Set_gtype( dl_element * el, int gtype );
 	void Set_visible( dl_element * el, int visible );

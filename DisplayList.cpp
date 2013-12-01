@@ -2534,6 +2534,14 @@ CPoint CDisplayList::WindowToPCB( CPoint point )
 	return p;
 }
 
+CPoint CDisplayList::ViewportCenterPCB()
+{
+   CPoint p;
+   p.x = ((m_max_x + m_org_x) * m_pcbu_per_wu) / 2.0;
+   p.y = ((m_max_y + m_org_y) * m_pcbu_per_wu) / 2.0;
+   return p;
+}
+
 // Convert point in screen coords to PCB units
 //
 CPoint CDisplayList::ScreenToPCB( CPoint point )

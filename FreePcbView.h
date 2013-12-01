@@ -525,6 +525,9 @@ public:
 	void HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags);
 	void CFreePcbView::TryToReselectAreaCorner( int x, int y );
 	void ReselectNetItemIfConnectionsChanged( int new_ic );
+
+	void zoomIn();
+	void zoomOut();
 protected:
 
 // Generated message map functions
