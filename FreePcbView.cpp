@@ -4147,46 +4147,15 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 		// home key pressed, ViewAllElements
 		OnViewAllElements();
 	}
-	else if( nChar == 33 )
+	else if( nChar == VK_PRIOR )
 	{
-		// PgUp pressed, zoom in
-		if( m_pcbu_per_pixel > 254 )
-		{
-			m_pcbu_per_pixel = m_pcbu_per_pixel/ZOOM_RATIO;
-			m_org_x = p.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
-			m_org_y = p.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel)/2;
-			CRect screen_r;
-			GetWindowRect( &screen_r );
-			m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel,
-				m_org_x, m_org_y );
-			Invalidate( FALSE );
-			p = m_dlist->PCBToScreen( p );
-			SetCursorPos( p.x, p.y );
-		}
+		// PgUp pressed
+		zoomIn();
 	}
-	else if( nChar == 34 )
+	else if( nChar == VK_NEXT )
 	{
 		// PgDn pressed, zoom out
-		// first, make sure that window boundaries will be OK
-		int org_x = p.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
-		int org_y = p.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
-		int max_x = org_x + (m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO;
-		int max_y = org_y + (m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel*ZOOM_RATIO;
-		if( org_x > -PCB_BOUND && org_x < PCB_BOUND && max_x > -PCB_BOUND && max_x < PCB_BOUND
-			&& org_y > -PCB_BOUND && org_y < PCB_BOUND && max_y > -PCB_BOUND && max_y < PCB_BOUND )
-		{
-			// OK, do it
-			m_org_x = org_x;
-			m_org_y = org_y;
-			m_pcbu_per_pixel = m_pcbu_per_pixel*ZOOM_RATIO;
-			CRect screen_r;
-			GetWindowRect( &screen_r );
-			m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel,
-				m_org_x, m_org_y );
-			Invalidate( FALSE );
-			p = m_dlist->PCBToScreen( p );
-			SetCursorPos( p.x, p.y );
-		}
+	   zoomOut();
 	}
 	ReleaseDC( pDC );
 	if( gLastKeyWasArrow ==FALSE && gLastKeyWasGroupRotate==false )
@@ -5493,13 +5462,6 @@ int CFreePcbView::ShowActiveLayer()
 //
 BOOL CFreePcbView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
 {
-#define MIN_WHEEL_DELAY 1.0
-
-	static struct _timeb current_time;
-	static struct _timeb last_time;
-	static int first_time = 1;
-	double diff;
-
 	// ignore if cursor not in window
 	CRect wr;
 	GetWindowRect( wr );
@@ -5510,85 +5472,17 @@ BOOL CFreePcbView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
 	if( m_bDraggingRect )
 		return CView::OnMouseWheel(nFlags, zDelta, pt);
 
-	// get current time
-	_ftime( &current_time );
-
-	if( first_time )
-	{
-		diff = 999.0;
-		first_time = 0;
-	}
-	else
-	{
-		// get elapsed time since last wheel event
-		diff = difftime( current_time.time, last_time.time );
-		double diff_mil = (double)(current_time.millitm - last_time.millitm)*0.001;
-		diff = diff + diff_mil;
-	}
-
-	if( diff > MIN_WHEEL_DELAY )
-	{
-		// first wheel movement in a while
-		// center window on cursor then center cursor
-		CPoint p;
-		GetCursorPos( &p );		// cursor pos in screen coords
-		p = m_dlist->ScreenToPCB( p );
-		m_org_x = p.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
-		m_org_y = p.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel)/2;
-		CRect screen_r;
-		GetWindowRect( &screen_r );
-		m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel, m_org_x, m_org_y );
-		Invalidate( FALSE );
-		p = m_dlist->PCBToScreen( p );
-		SetCursorPos( p.x, p.y - 4 );
-	}
-	else
-	{
-		// serial movements, zoom in or out
-		if( zDelta > 0 && m_pcbu_per_pixel > NM_PER_MIL/1000 )
-		{
-			// wheel pushed, zoom in then center world coords and cursor
-			CPoint p;
-			GetCursorPos( &p );		// cursor pos in screen coords
-			p = m_dlist->ScreenToPCB( p );	// convert to PCB coords
-			m_pcbu_per_pixel = m_pcbu_per_pixel/ZOOM_RATIO;
-			m_org_x = p.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
-			m_org_y = p.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel)/2;
-			CRect screen_r;
-			GetWindowRect( &screen_r );
-			m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel, m_org_x, m_org_y );
-			Invalidate( FALSE );
-			p = m_dlist->PCBToScreen( p );
-			SetCursorPos( p.x, p.y - 4 );
-		}
-		else if( zDelta < 0 )
-		{
-			// wheel pulled, zoom out then center
-			// first, make sure that window boundaries will be OK
-			CPoint p;
-			GetCursorPos( &p );		// cursor pos in screen coords
-			p = m_dlist->ScreenToPCB( p );
-			int org_x = p.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
-			int org_y = p.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
-			int max_x = org_x + (m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO;
-			int max_y = org_y + (m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel*ZOOM_RATIO;
-			if( org_x > -PCB_BOUND && org_x < PCB_BOUND && max_x > -PCB_BOUND && max_x < PCB_BOUND
-				&& org_y > -PCB_BOUND && org_y < PCB_BOUND && max_y > -PCB_BOUND && max_y < PCB_BOUND )
-			{
-				// OK, do it
-				m_org_x = org_x;
-				m_org_y = org_y;
-				m_pcbu_per_pixel = m_pcbu_per_pixel*ZOOM_RATIO;
-				CRect screen_r;
-				GetWindowRect( &screen_r );
-				m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel, m_org_x, m_org_y );
-				Invalidate( FALSE );
-				p = m_dlist->PCBToScreen( p );
-				SetCursorPos( p.x, p.y - 4 );
-			}
-		}
-	}
-	last_time = current_time;
+   // serial movements, zoom in or out
+   if( zDelta > 0 )
+   {
+      // wheel pushed
+      zoomIn();
+   }
+   else if( zDelta < 0 )
+   {
+      // wheel pulled
+      zoomOut();
+   }
 
 	return CView::OnMouseWheel(nFlags, zDelta, pt);
 }
@@ -10332,6 +10226,49 @@ void CFreePcbView::ReselectNetItemIfConnectionsChanged( int new_ic )
 	}
 	else
 		CancelSelection();
+}
+
+void CFreePcbView::zoomIn()
+{
+   if( m_pcbu_per_pixel <= 254 )
+      return;
+
+   CPoint center = m_dlist->ViewportCenterPCB();
+
+   m_pcbu_per_pixel = m_pcbu_per_pixel/ZOOM_RATIO;
+   m_org_x = center.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
+   // TODO I don't understand why we don't need to subtract m_bottom_pane_h
+   m_org_y = center.y - ((m_client_r.bottom)*m_pcbu_per_pixel)/2;
+   CRect screen_r;
+   GetWindowRect( &screen_r );
+   m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel,
+         m_org_x, m_org_y );
+   Invalidate( FALSE );
+}
+
+void CFreePcbView::zoomOut()
+{
+   // first, make sure that window boundaries will be OK
+   CPoint center = m_dlist->ViewportCenterPCB();
+
+   int org_x = center.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
+   // TODO I don't understand why we don't need to subtract m_bottom_pane_h
+   int org_y = center.y - ((m_client_r.bottom)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
+   int max_x = org_x + (m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO;
+   int max_y = org_y + (m_client_r.bottom)*m_pcbu_per_pixel*ZOOM_RATIO;
+   if( org_x > -PCB_BOUND && org_x < PCB_BOUND && max_x > -PCB_BOUND && max_x < PCB_BOUND
+         && org_y > -PCB_BOUND && org_y < PCB_BOUND && max_y > -PCB_BOUND && max_y < PCB_BOUND )
+   {
+      // OK, do it
+      m_org_x = org_x;
+      m_org_y = org_y;
+      m_pcbu_per_pixel = m_pcbu_per_pixel*ZOOM_RATIO;
+      CRect screen_r;
+      GetWindowRect( &screen_r );
+      m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel,
+            m_org_x, m_org_y );
+      Invalidate( FALSE );
+   }
 }
 
 void CFreePcbView::OnGroupCopy()
