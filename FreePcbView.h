@@ -356,6 +356,7 @@ public:
 
 	// parameters for dragging selection rectangle
 	BOOL m_bLButtonDown;
+	BOOL m_bMButtonDown;
 	BOOL m_bDraggingRect;
 	CPoint m_start_pt;
 	CRect m_drag_rect, m_last_drag_rect;
@@ -541,6 +542,10 @@ public:
 	void zoomIn();
 	void zoomOut();
 
+   CPoint m_panStartPoint;
+	void startMousePan(CPoint point);
+	void mousePan(CPoint point);
+
 	void partRotate(RotateDirection direction);
 	void refRotate(RotateDirection direction);
 	void valueRotate(RotateDirection direction);
@@ -552,6 +557,7 @@ protected:
 	//{{AFX_MSG(CFreePcbView)
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnMButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
@@ -655,6 +661,7 @@ public:
 	afx_msg void OnNetEditnet();
 	afx_msg void OnToolsMoveOrigin();
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
+	afx_msg void OnMButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnGroupMove();
 	afx_msg void OnAddSimilarArea();
 	afx_msg void OnSegmentAddVertex();
