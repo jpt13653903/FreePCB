@@ -10,8 +10,8 @@
 
 IMPLEMENT_DYNAMIC(CMyFileDialog, CFileDialog)
 CMyFileDialog::CMyFileDialog(BOOL bOpenFileDialog, LPCTSTR lpszDefExt, LPCTSTR lpszFileName,
-		DWORD dwFlags, LPCTSTR lpszFilter, CWnd* pParentWnd, DWORD dsize) :
-		CFileDialog(bOpenFileDialog, lpszDefExt, lpszFileName, dwFlags, lpszFilter, pParentWnd, dsize)
+		DWORD dwFlags, LPCTSTR lpszFilter, CWnd* pParentWnd, DWORD dsize, BOOL bVistaStyle) :
+		CFileDialog(bOpenFileDialog, lpszDefExt, lpszFileName, dwFlags, lpszFilter, pParentWnd, dsize, bVistaStyle)
 {
 }
 
