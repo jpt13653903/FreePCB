@@ -17,7 +17,8 @@ public:
 		DWORD dwFlags = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,
 		LPCTSTR lpszFilter = NULL,
 		CWnd* pParentWnd = NULL,
-		DWORD dsize = sizeof(OPENFILENAME) );
+		DWORD dsize = sizeof(OPENFILENAME),
+		BOOL bVistaStyle = FALSE);
 	virtual ~CMyFileDialogExport();
 	void Initialize( int select );
 	virtual BOOL OnFileNameOK();
