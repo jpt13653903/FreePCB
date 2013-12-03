@@ -7502,6 +7502,15 @@ void CFreePcbView::SnapCursorPoint( CPoint wp, UINT nFlags )
 			}
 			else
 			{
+			   // This makes coding the electrical grid more complicated.
+            // It's also an irritating behavior to begin with (makes the
+            // snapping feel less responsive) so that's two reasons to disable
+            // it.
+            // With this code disabled, routing can leave vertices so it's hard
+            // to move traces, but we can handle that in the future by deleting
+            // collinear vertices as a final routing step.  For now though,
+            // electrical grid is more important.
+#if 0
 				// old code
 				// snap to angle only if the starting point is on-grid
 				double ddx = fmod( (double)(m_snap_angle_ref.x), grid_spacing );
@@ -7611,6 +7620,7 @@ void CFreePcbView::SnapCursorPoint( CPoint wp, UINT nFlags )
 						}
 					}
 				}
+#endif
 			}
 		}
 		else
@@ -7619,35 +7629,13 @@ void CFreePcbView::SnapCursorPoint( CPoint wp, UINT nFlags )
 		// snap to grid points if needed
 		if( m_snap_mode == SM_GRID_POINTS )
 		{
-			// snap to grid
-			// get position in integral units of grid_spacing
-			if( wp.x > 0 )
-				wp.x = (wp.x + grid_spacing/2)/grid_spacing;
-			else
-				wp.x = (wp.x - grid_spacing/2)/grid_spacing;
-			if( wp.y > 0 )
-				wp.y = (wp.y + grid_spacing/2)/grid_spacing;
-			else
-				wp.y = (wp.y - grid_spacing/2)/grid_spacing;
-			// multiply by grid spacing, adding or subracting 0.5 to prevent round-off
-			// when using a fractional grid
-			double test = wp.x * grid_spacing;
-			if( test > 0.0 )
-				test += 0.5;
-			else
-				test -= 0.5;
-			wp.x = test;
-			test = wp.y * grid_spacing;
-			if( test > 0.0 )
-				test += 0.5;
-			else
-				test -= 0.5;
-			wp.y = test;
+		   if (m_cursor_mode == CUR_DRAG_RAT) {
+		      wp = CurDragRatSnapToGrid(wp, grid_spacing);
+         }
+         else 
+            wp = snapRaw(wp, grid_spacing);
 		}
-	}
-
-	if( CurDragging() )
-	{
+		
 		// update drag operation
 		if( wp != m_last_cursor_point )
 		{
@@ -13086,6 +13074,68 @@ void CFreePcbView::valueRotate(RotateDirection direction)
 	m_Doc->m_plist->SelectValueText( m_sel_part );
 	m_Doc->ProjectModified( TRUE );
 	Invalidate( FALSE );
+}
+
+CPoint CFreePcbView::CurDragRatSnapToGrid(CPoint wp, int grid_spacing)
+{
+   int x1 = SegmentStartPosition().x;
+   int x2 = SegmentEndPosition().x;
+   int y1 = SegmentStartPosition().y;
+   int y2 = SegmentEndPosition().y;
+
+   CPoint snapped = snapRaw(wp, grid_spacing);
+
+   if      (abs(wp.x - x1) < 2*abs(wp.x - snapped.x)) wp.x = x1;
+   else if (abs(wp.x - x2) < 2*abs(wp.x - snapped.x)) wp.x = x2;
+   else
+      wp.x = snapped.x;
+   
+   if      (abs(wp.y - y1) < 2*abs(wp.y - snapped.y)) wp.y = y1;
+   else if (abs(wp.y - y2) < 2*abs(wp.y - snapped.y)) wp.y = y2;
+   else
+      wp.y = snapped.y;
+
+   return wp;
+}
+
+CPoint CFreePcbView::snapRaw(CPoint wp, int grid_spacing)
+{
+   // snap to grid
+   // get position in integral units of grid_spacing
+   if( wp.x > 0 )
+      wp.x = (wp.x + grid_spacing/2)/grid_spacing;
+   else
+      wp.x = (wp.x - grid_spacing/2)/grid_spacing;
+   if( wp.y > 0 )
+      wp.y = (wp.y + grid_spacing/2)/grid_spacing;
+   else
+      wp.y = (wp.y - grid_spacing/2)/grid_spacing;
+			
+   // when using a fractional grid
+   double test = wp.x * grid_spacing;
+   if( test > 0.0 )
+      test += 0.5;
+   else
+      test -= 0.5;
+   wp.x = test;
+   test = wp.y * grid_spacing;
+   if( test > 0.0 )
+      test += 0.5;
+   else
+      test -= 0.5;
+   wp.y = test;
+
+   return wp;
+}
+
+CPoint CFreePcbView::SegmentStartPosition()
+{
+	return CPoint(m_sel_con.vtx[0].x, m_sel_con.vtx[0].y);
+}
+
+CPoint CFreePcbView::SegmentEndPosition()
+{
+	return CPoint(m_sel_con.vtx[m_sel_is+1].x, m_sel_con.vtx[m_sel_is+1].y);
 }
 
 

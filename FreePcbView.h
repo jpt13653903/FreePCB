@@ -550,6 +550,12 @@ public:
 	void refRotate(RotateDirection direction);
 	void valueRotate(RotateDirection direction);
 
+   CPoint CurDragRatSnapToGrid(CPoint wp, int grid_spacing);
+   CPoint snapRaw(CPoint wp, int grid_spacing);
+
+   CPoint SegmentStartPosition();
+   CPoint SegmentEndPosition();
+
 protected:
 
 // Generated message map functions
