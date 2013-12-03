@@ -102,6 +102,7 @@ BEGIN_MESSAGE_MAP(CFreePcbView, CView)
 	//{{AFX_MSG_MAP(CFreePcbView)
 	ON_WM_SIZE()
 	ON_WM_LBUTTONDOWN()
+	ON_WM_MBUTTONDOWN()
 	ON_WM_KEYDOWN()
 	ON_WM_MOUSEMOVE()
 	ON_WM_RBUTTONDOWN()
@@ -278,6 +279,8 @@ CFreePcbView::CFreePcbView()
 	m_dragging_new_item = FALSE;
 	m_bDraggingRect = FALSE;
 	m_bLButtonDown = FALSE;
+	m_bMButtonDown = FALSE;
+
 	CalibrateTimer();
 }
 
@@ -3342,15 +3345,17 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 			Invalidate( FALSE );
 		}
       else if ( fk == FK_ARROW) {
+         int delta = 100;
+         if (gShiftKeyDown) delta = 10;
          CPoint deltaScreenPos(0,0);
          if( nChar == 37 )
-            deltaScreenPos.x = -10;
+            deltaScreenPos.x = -1*delta;
          else if( nChar == 39 )
-            deltaScreenPos.x = 10;
+            deltaScreenPos.x = delta;
          else if( nChar == 38 )
-            deltaScreenPos.y = 10;
+            deltaScreenPos.y = delta;
          else if( nChar == 40 )
-            deltaScreenPos.y = -10;
+            deltaScreenPos.y = -1*delta;
          panDeltaScreen(deltaScreenPos);
       }
 		break;
@@ -4184,6 +4189,11 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 void CFreePcbView::OnMouseMove(UINT nFlags, CPoint point)
 {
 	static BOOL bCursorOn = TRUE;
+
+	if ( (nFlags & MK_MBUTTON) && m_bMButtonDown )
+   {
+      mousePan(point);
+   }
 
 	if( (nFlags & MK_LBUTTON) && m_bLButtonDown )
 	{
@@ -8907,6 +8917,44 @@ void CFreePcbView::OnLButtonDown(UINT nFlags, CPoint point)
 	m_start_pt = point;
 	CView::OnLButtonDown(nFlags, point);
 }
+
+void CFreePcbView::startMousePan(CPoint point)
+{
+	m_panStartPoint = point;
+}
+
+void CFreePcbView::mousePan(CPoint point)
+{
+   CPoint deltaScreenPos;
+   deltaScreenPos.x = m_panStartPoint.x - point.x;
+   deltaScreenPos.y = point.y - m_panStartPoint.y;
+
+   m_panStartPoint = point;
+
+   panDeltaScreen(deltaScreenPos);
+}
+
+void CFreePcbView::OnMButtonDown(UINT nFlags, CPoint point)
+{
+	// save starting position in pixels
+	m_bMButtonDown = TRUE;
+	startMousePan(point);
+
+	CView::OnMButtonDown(nFlags, point);
+}
+
+void CFreePcbView::OnMButtonUp(UINT nFlags, CPoint point)
+{
+	if( !m_bMButtonDown ) {
+		// this avoids problems with opening a project with the button held down
+      CView::OnMButtonUp(nFlags, point);
+      return;
+   }
+
+   m_bMButtonDown = FALSE;
+   CView::OnMButtonUp(nFlags, point);
+}
+
 
 // Select all parts and trace segments in rectangle
 // Fill arrays m_sel_ids[] and m_sel_ptrs[]
