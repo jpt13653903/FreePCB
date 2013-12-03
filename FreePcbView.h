@@ -13,6 +13,16 @@
 
 class CFreePcbView; 
 
+enum RotateDirection { 
+   ROTATE_CW = 0, 
+   ROTATE_CCW = 1 
+};
+
+enum RouteDirection {
+   ROUTE_FORWARD  = 0,
+   ROUTE_BACKWARD = 1
+};
+
 // cursor modes
 enum {
 	CUR_NONE_SELECTED = 0,		// nothing selected
@@ -388,8 +398,7 @@ public:
 #define m_sel_start_pin m_sel_net->pin[m_sel_con.start_pin]
 #define m_sel_end_pin m_sel_net->pin[m_sel_con.end_pin]
 
-	// direction of routing
-	int m_dir;			// 0 = forward, 1 = back
+	RouteDirection m_routeDirection;
 
 	// display coordinate mapping
 	double m_pcbu_per_pixel;	// pcb units per pixel
@@ -526,8 +535,16 @@ public:
 	void CFreePcbView::TryToReselectAreaCorner( int x, int y );
 	void ReselectNetItemIfConnectionsChanged( int new_ic );
 
+   void centerCursor();
+   void panDeltaScreen(CPoint deltaScreenPos);
+   void panToPCBPosition(CPoint position);
 	void zoomIn();
 	void zoomOut();
+
+	void partRotate(RotateDirection direction);
+	void refRotate(RotateDirection direction);
+	void valueRotate(RotateDirection direction);
+
 protected:
 
 // Generated message map functions
@@ -628,7 +645,6 @@ public:
 	afx_msg void OnSmSideHatchStyle();
 	afx_msg void OnSmSideDeleteCutout();
 	afx_msg void OnPartChangeSide();
-	afx_msg void OnPartRotate();
 	afx_msg void OnNetSetWidth();
 	afx_msg void OnConnectSetWidth();
 	afx_msg void OnConnectUnroutetrace();
@@ -664,6 +680,7 @@ public:
 	afx_msg void OnValueProperties();
 	afx_msg void OnValueShowPart();
 	afx_msg void OnPartEditValue();
+	afx_msg void OnPartRotateCW();
 	afx_msg void OnPartRotateCCW();
 	afx_msg void OnRefRotateCW();
 	afx_msg void OnRefRotateCCW();
