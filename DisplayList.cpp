@@ -99,6 +99,7 @@ void CDisplayList::RemoveAll()
 //	client_r = window client rectangle (pixels)
 //	screen_r = window client rectangle in screen coords (pixels)
 //	pane_org_x = starting x-coord of PCB drawing area in client rect (pixels)
+//	pane_org_y = starting y-coord of PCB drawing area in client rect (pixels)
 //  pane_bottom_h = height of bottom pane (pixels)
 //	pcb units per pixel = nm per pixel
 //	org_x = x-coord of left edge of drawing area (pcb units)
@@ -375,24 +376,7 @@ void CDisplayList::Draw( CDC * dDC )
 	client_rect.top = m_max_y;
 	pDC->Rectangle( &client_rect );
 
-	// visual grid
-	if( m_visual_grid_on && (m_visual_grid_spacing/m_scale)>5 && m_vis[LAY_VISIBLE_GRID] )
-	{
-		int startix = m_org_x/m_visual_grid_spacing;
-		int startiy = m_org_y/m_visual_grid_spacing;
-		double start_grid_x = startix*m_visual_grid_spacing;
-		double start_grid_y = startiy*m_visual_grid_spacing;
-		for( double ix=start_grid_x; ix<m_max_x; ix+=m_visual_grid_spacing )
-		{
-			for( double iy=start_grid_y; iy<m_max_y; iy+=m_visual_grid_spacing )
-			{
-				pDC->SetPixel( ix, iy, 
-					RGB( m_rgb[LAY_VISIBLE_GRID][0], 
-						 m_rgb[LAY_VISIBLE_GRID][1], 
-						 m_rgb[LAY_VISIBLE_GRID][2] ) );
-			}
-		}
-	}
+   DrawVisualGrid(pDC);
 
 	// now traverse the lists, starting with the layer in the last element 
 	// of the m_order[] array
@@ -1136,6 +1120,8 @@ void CDisplayList::Draw( CDC * dDC )
 		pDC->SetBkColor( bk );
 	}
 	pDC->SetROP2( old_ROP2 );
+
+   //DrawDebug(pDC);
 
 	// restore original objects
 	pDC->SelectObject( old_pen );
@@ -2536,10 +2522,10 @@ CPoint CDisplayList::WindowToPCB( CPoint point )
 
 CPoint CDisplayList::ViewportCenterPCB()
 {
-   CPoint p;
-   p.x = ((m_max_x + m_org_x) * m_pcbu_per_wu) / 2.0;
-   p.y = ((m_max_y + m_org_y) * m_pcbu_per_wu) / 2.0;
-   return p;
+   CPoint c1 = WindowToPCB(CPoint(m_pane_org_x, m_pane_org_y));
+   CPoint c2 = WindowToPCB(CPoint(m_client_r.right, m_client_r.top));
+
+   return CPoint((c1.x + c2.x)/2.0, (c1.y + c2.y)/2.0);
 }
 
 // Convert point in screen coords to PCB units
@@ -2564,4 +2550,53 @@ CPoint CDisplayList::PCBToScreen( CPoint point )
 }
 
 
+void CDisplayList::DrawVisualGrid( CDC * pDC )
+{
+	if( m_visual_grid_on && (m_visual_grid_spacing/m_scale)>5 && m_vis[LAY_VISIBLE_GRID] )
+	{
+		int startix = m_org_x/m_visual_grid_spacing;
+		int startiy = m_org_y/m_visual_grid_spacing;
+		double start_grid_x = startix*m_visual_grid_spacing;
+		double start_grid_y = startiy*m_visual_grid_spacing;
+		for( double ix=start_grid_x; ix<m_max_x; ix+=m_visual_grid_spacing )
+		{
+			for( double iy=start_grid_y; iy<m_max_y; iy+=m_visual_grid_spacing )
+			{
+				pDC->SetPixel( ix, iy, 
+					RGB( m_rgb[LAY_VISIBLE_GRID][0], 
+						 m_rgb[LAY_VISIBLE_GRID][1], 
+						 m_rgb[LAY_VISIBLE_GRID][2] ) );
+			}
+		}
+	}
+}
+	
+void CDisplayList::DrawDebug( CDC * pDC ) // debug only
+{
+   CPen pen( PS_DOT, 0, RGB( 255, 0, 255 ) );
+   pDC->SelectObject( &pen );
 
+   //CPoint bottomLeft(m_org_x + 10, m_org_y+10);
+   CPoint bottomLeft(0,0);
+   //CPoint topRight(50*m_wu_per_pixel_x, 50*m_wu_per_pixel_y);
+   //CPoint topRight(5000, 10000);
+   CPoint topRight = WindowToPCB(CPoint(m_pane_org_x, m_pane_org_y));
+   topRight.x /= m_pcbu_per_wu;
+   topRight.y /= m_pcbu_per_wu;
+
+   pDC->MoveTo( bottomLeft );
+   pDC->LineTo( topRight );
+
+   CPen pen1( PS_DOT, 0, RGB( 255, 255, 255 ) );
+   pDC->SelectObject( &pen1 );
+
+   CPoint origin   = WindowToPCB(CPoint(m_pane_org_x, m_pane_org_y));
+   CPoint endpoint = WindowToPCB( CPoint(m_client_r.right , m_client_r.top) );
+   origin.x /= m_pcbu_per_wu;
+   origin.y /= m_pcbu_per_wu;
+   endpoint.x /= m_pcbu_per_wu;
+   endpoint.y /= m_pcbu_per_wu;
+
+   pDC->MoveTo( origin );
+   pDC->LineTo( endpoint );
+}

@@ -195,6 +195,9 @@ private:
 	int m_visual_grid_on;
 	double m_visual_grid_spacing;	// in world units
 
+	void DrawVisualGrid( CDC * pDC );
+	void DrawDebug( CDC * pDC );// debug only
+
 public:
 	CDisplayList( int pcbu_per_wu );
 	~CDisplayList();

@@ -14,7 +14,7 @@
 #include <time.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include "freepcbview.h"
+#include "FreePcbView.h"
 #include "DlgAddPart.h"
 #include "DlgSetAreaHatch.h"
 #include "DlgDupFootprintName.h" 
@@ -57,7 +57,7 @@ static char THIS_FILE[] = __FILE__;
 // constants for function key menu
 #define FKEY_OFFSET_X 4
 #define FKEY_OFFSET_Y 4
-#define	FKEY_R_W 70
+#define FKEY_R_W 70
 #define FKEY_R_H 30
 #define FKEY_STEP (FKEY_R_W+5)
 #define FKEY_GAP 20
@@ -205,7 +205,6 @@ ON_COMMAND(ID_SMSIDE_INSERTCORNER, OnSmSideInsertCorner)
 ON_COMMAND(ID_SMSIDE_HATCHSTYLE, OnSmSideHatchStyle)
 ON_COMMAND(ID_SMSIDE_DELETECUTOUT, OnSmSideDeleteCutout)
 ON_COMMAND(ID_PART_CHANGESIDE, OnPartChangeSide)
-ON_COMMAND(ID_PART_ROTATE, OnPartRotate)
 ON_COMMAND(ID_AREAEDGE_ADDCUTOUT, OnAreaAddCutout)
 ON_COMMAND(ID_AREACORNER_ADDCUTOUT, OnAreaAddCutout)
 ON_COMMAND(ID_NET_SETWIDTH, OnNetSetWidth)
@@ -243,6 +242,7 @@ ON_COMMAND(ID_VALUE_MOVE, OnValueMove)
 ON_COMMAND(ID_VALUE_CHANGESIZE, OnValueProperties)
 ON_COMMAND(ID_VALUE_SHOWPART, OnValueShowPart)
 ON_COMMAND(ID_PART_EDITVALUE, OnPartEditValue)
+ON_COMMAND(ID_PART_ROTATE, OnPartRotateCW)
 ON_COMMAND(ID_PART_ROTATECOUNTERCLOCKWISE, OnPartRotateCCW)
 ON_COMMAND(ID_REF_ROTATECW, OnRefRotateCW)
 ON_COMMAND(ID_REF_ROTATECCW, OnRefRotateCCW)
@@ -279,7 +279,7 @@ CFreePcbView::CFreePcbView()
 	m_bDraggingRect = FALSE;
 	m_bLButtonDown = FALSE;
 	CalibrateTimer();
- }
+}
 
 // initialize the view object
 // this code can't be placed in the constructor, because it depends on document
@@ -330,7 +330,7 @@ void CFreePcbView::InitializeView()
 	SetCursorMode( CUR_NONE_SELECTED );
 	m_sel_id.Clear();
 	m_sel_layer = 0;
-	m_dir = 0;
+	m_routeDirection = ROUTE_FORWARD;
 	m_debug_flag = 0;
 	m_dragging_new_item = 0;
 	m_active_layer = LAY_TOP_COPPER;
@@ -1273,7 +1273,7 @@ void CFreePcbView::OnLButtonUp(UINT nFlags, CPoint point)
 			GetWidthsForSegment( &w, &via_w, &via_hole_w );
 			cconnect * c = &m_sel_net->connect[m_sel_ic];
 			// test for termination of trace
-			if( c->end_pin == cconnect::NO_END && m_sel_is == c->nsegs-1 && m_dir == 0
+			if( c->end_pin == cconnect::NO_END && m_sel_is == c->nsegs-1 && m_routeDirection == ROUTE_FORWARD
 				&& c->vtx[c->nsegs].tee_ID )
 			{
 				// routing branch to tee-vertex, test for hit on tee-vertex
@@ -1298,24 +1298,24 @@ void CFreePcbView::OnLButtonUp(UINT nFlags, CPoint point)
 						if( pp != pi )
 						{
 							insert_flag = m_Doc->m_nlist->InsertSegment( m_sel_net, m_sel_ic, m_sel_is,
-								pp.x, pp.y, m_active_layer, w, via_w, via_hole_w, m_dir );
+								pp.x, pp.y, m_active_layer, w, via_w, via_hole_w, m_routeDirection );
 							if( !insert_flag )
 							{
 								// hit end-vertex of segment, terminate routing
 								goto cancel_selection_and_goodbye;
 							}
-							if( m_dir == 0 )
+							if( m_routeDirection == ROUTE_FORWARD )
 								m_sel_is++;
 						}
 						insert_flag = m_Doc->m_nlist->InsertSegment( m_sel_net, m_sel_ic, m_sel_is,
 							m_last_cursor_point.x, m_last_cursor_point.y,
-							m_active_layer, w, via_w, via_hole_w, m_dir );
+							m_active_layer, w, via_w, via_hole_w, m_routeDirection );
 						if( !insert_flag )
 						{
 							// hit end-vertex of segment, terminate routing
 							goto cancel_selection_and_goodbye;
 						}
-						if( m_dir == 0 )
+						if( m_routeDirection == ROUTE_FORWARD )
 							m_sel_is++;
 						// finish trace if necessary
 						m_Doc->m_nlist->RouteSegment( m_sel_net, m_sel_ic, m_sel_is,
@@ -1325,10 +1325,10 @@ void CFreePcbView::OnLButtonUp(UINT nFlags, CPoint point)
 					}
 				}
 			}
-			else if( m_dir == 0 && c->vtx[m_sel_is+1].tee_ID || m_dir == 1 && c->vtx[m_sel_is].tee_ID )
+			else if( m_routeDirection == ROUTE_FORWARD && c->vtx[m_sel_is+1].tee_ID || m_routeDirection == ROUTE_BACKWARD && c->vtx[m_sel_is].tee_ID )
 			{
 				// routing ratline to tee-vertex
-				int tee_iv = m_sel_is + 1 - m_dir;
+				int tee_iv = m_sel_is + 1 - (int)m_routeDirection;
 				cnet * hit_net;
 				int hit_ic, hit_iv;
 				BOOL bHit = m_Doc->m_nlist->TestForHitOnVertex( m_sel_net, 0,
@@ -1345,24 +1345,24 @@ void CFreePcbView::OnLButtonUp(UINT nFlags, CPoint point)
 					if( pp != pi )
 					{
 						insert_flag = m_Doc->m_nlist->InsertSegment( m_sel_net, m_sel_ic, m_sel_is,
-							pp.x, pp.y, m_active_layer, w, via_w, via_hole_w, m_dir );
+							pp.x, pp.y, m_active_layer, w, via_w, via_hole_w, m_routeDirection );
 						if( !insert_flag )
 						{
 							// hit end-vertex of segment, terminate routing
 							goto cancel_selection_and_goodbye;
 						}
-						if( m_dir == 0 )
+						if( m_routeDirection == ROUTE_FORWARD )
 							m_sel_is++;
 					}
 					insert_flag = m_Doc->m_nlist->InsertSegment( m_sel_net, m_sel_ic, m_sel_is,
 						m_last_cursor_point.x, m_last_cursor_point.y,
-						m_active_layer, w, via_w, via_hole_w, m_dir );
+						m_active_layer, w, via_w, via_hole_w, m_routeDirection );
 					if( !insert_flag )
 					{
 						// hit end-vertex of segment, terminate routing
 						goto cancel_selection_and_goodbye;
 					}
-					if( m_dir == 0 )
+					if( m_routeDirection == ROUTE_FORWARD )
 						m_sel_is++;
 					// finish trace if necessary
 					m_Doc->m_nlist->RouteSegment( m_sel_net, m_sel_ic, m_sel_is,
@@ -1370,7 +1370,7 @@ void CFreePcbView::OnLButtonUp(UINT nFlags, CPoint point)
 					goto cancel_selection_and_goodbye;
 				}
 			}
-			else if( m_sel_is == 0 && m_dir == 1 || m_sel_is == c->nsegs-1 && m_dir == 0 )
+			else if( m_sel_is == 0 && m_routeDirection == ROUTE_BACKWARD || m_sel_is == c->nsegs-1 && m_routeDirection == ROUTE_FORWARD )
 			{
 				// routing ratline at end of trace, test for hit on any pad in net
 				int ip = m_Doc->m_nlist->TestHitOnAnyPadInNet( m_last_cursor_point.x,
@@ -1380,8 +1380,8 @@ void CFreePcbView::OnLButtonUp(UINT nFlags, CPoint point)
 				if( ip != -1 )
 				{
 					// hit on pad in net, see if this is our starting pad
-					if( ns < 3 && (m_dir == 0 && ip == m_sel_net->connect[m_sel_ic].start_pin
-						|| m_dir == 1 && ip == m_sel_net->connect[m_sel_ic].end_pin) )
+					if( ns < 3 && (m_routeDirection == ROUTE_FORWARD && ip == m_sel_net->connect[m_sel_ic].start_pin
+						|| m_routeDirection == ROUTE_BACKWARD && ip == m_sel_net->connect[m_sel_ic].end_pin) )
 					{
 						// starting pin with too few segments, don't route to pin
 					}
@@ -1389,13 +1389,13 @@ void CFreePcbView::OnLButtonUp(UINT nFlags, CPoint point)
 					{
 						// route to pin
 						// see if this is our destination
-						if( !(m_dir == 0 && ip == m_sel_net->connect[m_sel_ic].end_pin
-							|| m_dir == 1 && ip == m_sel_net->connect[m_sel_ic].start_pin) )
+						if( !(m_routeDirection == ROUTE_FORWARD && ip == m_sel_net->connect[m_sel_ic].end_pin
+							|| m_routeDirection == ROUTE_BACKWARD && ip == m_sel_net->connect[m_sel_ic].start_pin) )
 						{
 							// no, change connection to this pin unless it is the starting pin
 							cpart * hit_part = m_sel_net->pin[ip].part;
 							CString * hit_pin_name = &m_sel_net->pin[ip].pin_name;
-							m_Doc->m_nlist->ChangeConnectionPin( m_sel_net, m_sel_ic, 1-m_dir, hit_part, hit_pin_name );
+							m_Doc->m_nlist->ChangeConnectionPin( m_sel_net, m_sel_ic, 1-(int)m_routeDirection, hit_part, hit_pin_name );
 						}
 						// now route to destination pin
 						SaveUndoInfoForNetAndConnections( m_sel_net, CNetList::UNDO_NET_MODIFY, TRUE, m_Doc->m_undo_list );
@@ -1406,24 +1406,24 @@ void CFreePcbView::OnLButtonUp(UINT nFlags, CPoint point)
 						if( pp != pi )
 						{
 							insert_flag = m_Doc->m_nlist->InsertSegment( m_sel_net, m_sel_ic, m_sel_is,
-								pp.x, pp.y, m_active_layer, w, via_w, via_hole_w, m_dir );
+								pp.x, pp.y, m_active_layer, w, via_w, via_hole_w, m_routeDirection );
 							if( !insert_flag )
 							{
 								// hit end-vertex of segment, terminate routing
 								goto cancel_selection_and_goodbye;
 							}
-							if( m_dir == 0 )
+							if( m_routeDirection == ROUTE_FORWARD )
 								m_sel_is++;
 						}
 						insert_flag = m_Doc->m_nlist->InsertSegment( m_sel_net, m_sel_ic, m_sel_is,
 							m_last_cursor_point.x, m_last_cursor_point.y,
-							m_active_layer, w, via_w, via_hole_w, m_dir );
+							m_active_layer, w, via_w, via_hole_w, m_routeDirection );
 						if( !insert_flag )
 						{
 							// hit end-vertex of segment, terminate routing
 							goto cancel_selection_and_goodbye;
 						}
-						if( m_dir == 0 )
+						if( m_routeDirection == ROUTE_FORWARD )
 							m_sel_is++;
 						// finish trace to pad if necessary
 						m_Doc->m_nlist->RouteSegment( m_sel_net, m_sel_ic, m_sel_is,
@@ -1441,30 +1441,30 @@ void CFreePcbView::OnLButtonUp(UINT nFlags, CPoint point)
 			if( pp != pi )
 			{
 				insert_flag = m_Doc->m_nlist->InsertSegment( m_sel_net, m_sel_ic, m_sel_is,
-					pp.x, pp.y, m_active_layer, w, via_w, via_hole_w, m_dir );
+					pp.x, pp.y, m_active_layer, w, via_w, via_hole_w, m_routeDirection );
 				if( !insert_flag )
 				{
 					// hit end-vertex of segment, terminate routing
 					goto cancel_selection_and_goodbye;
 				}
-				if( m_dir == 0 )
+				if( m_routeDirection == ROUTE_FORWARD )
 					m_sel_is++;
 			}
 			insert_flag = m_Doc->m_nlist->InsertSegment( m_sel_net, m_sel_ic, m_sel_is,
 				m_last_cursor_point.x, m_last_cursor_point.y,
-				m_active_layer, w, via_w, via_hole_w, m_dir );
+				m_active_layer, w, via_w, via_hole_w, m_routeDirection );
 			if( !insert_flag )
 			{
 				// hit end-vertex of segment, terminate routing
 				goto cancel_selection_and_goodbye;
 			}
-			if( m_dir == 0 )
+			if( m_routeDirection == ROUTE_FORWARD )
 				m_sel_is++;
 			m_Doc->m_nlist->StartDraggingSegment( pDC, m_sel_net,
 				m_sel_id.i, m_sel_is,
 				m_last_cursor_point.x, m_last_cursor_point.y, m_active_layer,
 				LAY_SELECTION, w,
-				m_active_layer, via_w, via_hole_w, m_dir, 2 );
+				m_active_layer, via_w, via_hole_w, m_routeDirection, 2 );
 			m_snap_angle_ref = m_last_cursor_point;
 			m_Doc->ProjectModified( TRUE );
 			Invalidate( FALSE );
@@ -1483,7 +1483,7 @@ void CFreePcbView::OnLButtonUp(UINT nFlags, CPoint point)
 			int w = m_sel_net->connect[m_sel_ic].seg[m_sel_is].width;
 			int insert_flag = m_Doc->m_nlist->InsertSegment( m_sel_net, m_sel_ic, m_sel_is,
 				m_last_cursor_point.x, m_last_cursor_point.y,
-				layer, w, 0, 0, m_dir );
+				layer, w, 0, 0, m_routeDirection );
 			CancelSelection();
 			m_Doc->ProjectModified( TRUE );
 			Invalidate( FALSE );
@@ -3040,7 +3040,7 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 		if( m_cursor_mode == CUR_DRAG_RAT )
 		{
 			// backup, if possible, by unrouting preceding segment and changing active layer
-			if( m_dir == 0 && m_sel_is > 0 )
+			if( m_routeDirection == ROUTE_FORWARD && m_sel_is > 0 )
 			{
 				// routing forward
 				if( m_sel_net->connect[m_sel_ic].vtx[m_sel_is].tee_ID )
@@ -3064,7 +3064,7 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 					ShowActiveLayer();
 				}
 			}
-			else if( m_dir == 1 && m_sel_is < m_sel_net->connect[m_sel_ic].nsegs-1
+			else if( m_routeDirection == ROUTE_BACKWARD && m_sel_is < m_sel_net->connect[m_sel_ic].nsegs-1
 				&& !(m_sel_is == m_sel_net->connect[m_sel_ic].nsegs-2
 				&& m_sel_net->connect[m_sel_ic].end_pin == cconnect::NO_END ) )
 			{
@@ -3186,7 +3186,7 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 					// if we are routing, change layer
 					pDC->SelectClipRgn( &m_pcb_rgn );
 					SetDCToWorldCoords( pDC );
-					if( m_sel_id.ii == 0 && m_dir == 0 )
+					if( m_sel_id.ii == 0 && m_routeDirection == ROUTE_FORWARD )
 					{
 						// we are trying to change first segment from pad
 						int p1 = m_sel_con.start_pin;
@@ -3199,7 +3199,7 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 							PlaySound( TEXT("CriticalStop"), 0, 0 );
 						}
 					}
-					else if( m_sel_id.ii == (m_sel_con.nsegs-1) && m_dir == 1 )
+					else if( m_sel_id.ii == (m_sel_con.nsegs-1) && m_routeDirection == ROUTE_BACKWARD )
 					{
 						// we are trying to change last segment to pad
 						int p2 = m_sel_con.end_pin;
@@ -3341,6 +3341,18 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 			//			double time = GetElapsedTime();
 			Invalidate( FALSE );
 		}
+      else if ( fk == FK_ARROW) {
+         CPoint deltaScreenPos(0,0);
+         if( nChar == 37 )
+            deltaScreenPos.x = -10;
+         else if( nChar == 39 )
+            deltaScreenPos.x = 10;
+         else if( nChar == 38 )
+            deltaScreenPos.y = 10;
+         else if( nChar == 40 )
+            deltaScreenPos.y = -10;
+         panDeltaScreen(deltaScreenPos);
+      }
 		break;
 
 	case CUR_PART_SELECTED:
@@ -4045,11 +4057,23 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 	case  CUR_DRAG_REF:
 		if( fk == FK_ROTATE_REF )
 			m_dlist->IncrementDragAngle( pDC );
+		if ( fk == FK_ROTATE_REF_CCW )
+      {
+			m_dlist->IncrementDragAngle( pDC );
+			m_dlist->IncrementDragAngle( pDC );
+			m_dlist->IncrementDragAngle( pDC );
+      }
 		break;
 
 	case  CUR_DRAG_VALUE:
 		if( fk == FK_ROTATE_VALUE )
 			m_dlist->IncrementDragAngle( pDC );
+		if( fk == FK_ROTATE_VALUE_CCW )
+      {
+			m_dlist->IncrementDragAngle( pDC );
+			m_dlist->IncrementDragAngle( pDC );
+			m_dlist->IncrementDragAngle( pDC );
+      }
 		break;
 
 	case  CUR_DRAG_TEXT:
@@ -4132,15 +4156,8 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 	if( nChar == ' ' )
 	{
 		// space bar pressed, center window on cursor then center cursor
-		m_org_x = p.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
-		m_org_y = p.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel)/2;
-		CRect screen_r;
-		GetWindowRect( &screen_r );
-		m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel,
-			m_org_x, m_org_y );
-		Invalidate( FALSE );
-		p = m_dlist->PCBToScreen( p );
-		SetCursorPos( p.x, p.y );
+		panToPCBPosition(p);
+		centerCursor();
 	}
 	else if( nChar == VK_HOME )
 	{
@@ -4529,10 +4546,12 @@ void CFreePcbView::SetFKText( int mode )
 
 	case CUR_DRAG_REF:
 		m_fkey_option[2] = FK_ROTATE_REF;
+		m_fkey_option[3] = FK_ROTATE_REF_CCW;
 		break;
 
 	case CUR_DRAG_VALUE:
 		m_fkey_option[2] = FK_ROTATE_VALUE;
+		m_fkey_option[3] = FK_ROTATE_VALUE_CCW;
 		break;
 
 	case CUR_DRAG_TEXT:
@@ -6448,8 +6467,7 @@ void CFreePcbView::OnRatlineRoute()
 	double d2 = d2x*d2x + d2y*d2y;
 	if( d1<d2 )
 	{
-		// route forward
-		m_dir = 0;
+		m_routeDirection = ROUTE_FORWARD;
 		if( m_sel_id.ii > 0 )
 			last_seg_layer = m_sel_con.seg[m_sel_id.ii-1].layer;
 		m_snap_angle_ref.x = m_sel_vtx.x;
@@ -6457,14 +6475,13 @@ void CFreePcbView::OnRatlineRoute()
 	}
 	else
 	{
-		// route backward
-		m_dir = 1;
+		m_routeDirection = ROUTE_BACKWARD;
 		if( m_sel_id.ii < (m_sel_con.nsegs-1) )
 			last_seg_layer = m_sel_con.seg[m_sel_id.ii+1].layer;
 		m_snap_angle_ref.x = m_sel_next_vtx.x;
 		m_snap_angle_ref.y = m_sel_next_vtx.y;
 	}
-	if( m_sel_id.ii == 0 && m_dir == 0)
+	if( m_sel_id.ii == 0 && m_routeDirection == ROUTE_FORWARD)
 	{
 		// first segment, force to layer of starting pad if SMT
 		int p1 = m_sel_con.start_pin;
@@ -6477,7 +6494,7 @@ void CFreePcbView::OnRatlineRoute()
 			ShowActiveLayer();
 		}
 	}
-	else if( m_sel_id.ii == (n_segs-1) && m_dir == 1 )
+	else if( m_sel_id.ii == (n_segs-1) && m_routeDirection == ROUTE_BACKWARD )
 	{
 		// last segment, force to layer of starting pad if SMT
 		int p1 = m_sel_con.end_pin;
@@ -6505,7 +6522,7 @@ void CFreePcbView::OnRatlineRoute()
 	m_Doc->m_nlist->StartDraggingSegment( pDC, m_sel_net, m_sel_ic, m_sel_is,
 		p.x, p.y, m_active_layer,
 		LAY_SELECTION, w,
-		last_seg_layer, via_w, via_hole_w, m_dir, 2 );
+		last_seg_layer, via_w, via_hole_w, m_routeDirection, 2 );
 	SetCursorMode( CUR_DRAG_RAT );
 	ReleaseDC( pDC );
 }
@@ -8686,44 +8703,15 @@ void CFreePcbView::OnPartChangeSide()
 	Invalidate( FALSE );
 }
 
-// rotate part clockwise 90 degrees clockwise
-//
-void CFreePcbView::OnPartRotate()
+void CFreePcbView::OnPartRotateCW()
 {
-	SaveUndoInfoForPartAndNets( m_sel_part,
-		CPartList::UNDO_PART_MODIFY, NULL, TRUE, m_Doc->m_undo_list );
-	m_Doc->m_dlist->CancelHighLight();
-	m_Doc->m_plist->UndrawPart( m_sel_part );
-	m_sel_part->angle = (m_sel_part->angle + 90)%360;
-	m_Doc->m_plist->DrawPart( m_sel_part );
-	m_Doc->m_nlist->PartMoved( m_sel_part );
-	if( m_Doc->m_vis[LAY_RAT_LINE] )
-		m_Doc->m_nlist->OptimizeConnections( m_sel_part, m_Doc->m_auto_ratline_disable, 
-										m_Doc->m_auto_ratline_min_pins );
-	m_Doc->m_plist->HighlightPart( m_sel_part );
-	ShowSelectStatus();
-	m_Doc->ProjectModified( TRUE );
-	Invalidate( FALSE );
+   partRotate(ROTATE_CW);
 }
 
 void CFreePcbView::OnPartRotateCCW()
 {
-	SaveUndoInfoForPartAndNets( m_sel_part,
-		CPartList::UNDO_PART_MODIFY, NULL, TRUE, m_Doc->m_undo_list );
-	m_Doc->m_dlist->CancelHighLight();
-	m_Doc->m_plist->UndrawPart( m_sel_part );
-	m_sel_part->angle = (m_sel_part->angle + 270)%360;
-	m_Doc->m_plist->DrawPart( m_sel_part );
-	m_Doc->m_nlist->PartMoved( m_sel_part );
-	if( m_Doc->m_vis[LAY_RAT_LINE] )
-		m_Doc->m_nlist->OptimizeConnections( m_sel_part, m_Doc->m_auto_ratline_disable, 
-										m_Doc->m_auto_ratline_min_pins );
-	m_Doc->m_plist->HighlightPart( m_sel_part );
-	ShowSelectStatus();
-	m_Doc->ProjectModified( TRUE );
-	Invalidate( FALSE );
+   partRotate(ROTATE_CCW);
 }
-
 
 void CFreePcbView::OnNetSetWidth()
 {
@@ -10228,6 +10216,32 @@ void CFreePcbView::ReselectNetItemIfConnectionsChanged( int new_ic )
 		CancelSelection();
 }
 
+void CFreePcbView::panDeltaScreen(CPoint deltaScreenPos)
+{
+   CPoint newCenter = m_dlist->ViewportCenterPCB() + deltaScreenPos;
+   newCenter.x += deltaScreenPos.x * m_pcbu_per_pixel;
+   newCenter.y += deltaScreenPos.y * m_pcbu_per_pixel;
+
+   panToPCBPosition(newCenter);
+}
+
+void CFreePcbView::panToPCBPosition(CPoint position)
+{
+   m_org_x = position.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
+   m_org_y = position.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel)/2;
+   CRect screen_r;
+   GetWindowRect( &screen_r );
+   m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel,
+         m_org_x, m_org_y );
+   Invalidate( FALSE );
+}
+
+void CFreePcbView::centerCursor()
+{
+   CPoint p = m_dlist->PCBToScreen( m_dlist->ViewportCenterPCB() );
+   SetCursorPos( p.x, p.y );
+}
+
 void CFreePcbView::zoomIn()
 {
    if( m_pcbu_per_pixel <= 254 )
@@ -10237,8 +10251,7 @@ void CFreePcbView::zoomIn()
 
    m_pcbu_per_pixel = m_pcbu_per_pixel/ZOOM_RATIO;
    m_org_x = center.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
-   // TODO I don't understand why we don't need to subtract m_bottom_pane_h
-   m_org_y = center.y - ((m_client_r.bottom)*m_pcbu_per_pixel)/2;
+   m_org_y = center.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel)/2;
    CRect screen_r;
    GetWindowRect( &screen_r );
    m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel,
@@ -10252,8 +10265,7 @@ void CFreePcbView::zoomOut()
    CPoint center = m_dlist->ViewportCenterPCB();
 
    int org_x = center.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
-   // TODO I don't understand why we don't need to subtract m_bottom_pane_h
-   int org_y = center.y - ((m_client_r.bottom)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
+   int org_y = center.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
    int max_x = org_x + (m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO;
    int max_y = org_y + (m_client_r.bottom)*m_pcbu_per_pixel*ZOOM_RATIO;
    if( org_x > -PCB_BOUND && org_x < PCB_BOUND && max_x > -PCB_BOUND && max_x < PCB_BOUND
@@ -12959,46 +12971,69 @@ void CFreePcbView::OnPartEditValue()
 
 void CFreePcbView::OnRefRotateCW()
 {
-	SaveUndoInfoForPart( m_sel_part, CPartList::UNDO_PART_MODIFY, NULL, TRUE, m_Doc->m_undo_list ); 
-	m_dlist->CancelHighLight();
-	m_Doc->m_plist->UndrawPart( m_sel_part );
-	m_sel_part->m_ref_angle = (m_sel_part->m_ref_angle + 90)%360;
-	m_Doc->m_plist->DrawPart( m_sel_part );
-	m_Doc->m_plist->SelectRefText( m_sel_part );
-	m_Doc->ProjectModified( TRUE );
-	Invalidate( FALSE );
+   refRotate(ROTATE_CW);
 }
 
 void CFreePcbView::OnRefRotateCCW()
 {
+   refRotate(ROTATE_CCW);
+}
+
+void CFreePcbView::OnValueRotateCW()
+{
+   valueRotate(ROTATE_CW);
+}
+
+void CFreePcbView::OnValueRotateCCW()
+{
+   valueRotate(ROTATE_CCW);
+}
+
+void CFreePcbView::partRotate(RotateDirection direction)
+{
+   int angle = 90;
+   if (direction == ROTATE_CCW) angle = 270;
+
+	SaveUndoInfoForPartAndNets( m_sel_part,
+		CPartList::UNDO_PART_MODIFY, NULL, TRUE, m_Doc->m_undo_list );
+	m_Doc->m_dlist->CancelHighLight();
+	m_Doc->m_plist->UndrawPart( m_sel_part );
+	m_sel_part->angle = (m_sel_part->angle + 90)%360;
+	m_Doc->m_plist->DrawPart( m_sel_part );
+	m_Doc->m_nlist->PartMoved( m_sel_part );
+	if( m_Doc->m_vis[LAY_RAT_LINE] )
+		m_Doc->m_nlist->OptimizeConnections( m_sel_part, m_Doc->m_auto_ratline_disable, 
+										m_Doc->m_auto_ratline_min_pins );
+	m_Doc->m_plist->HighlightPart( m_sel_part );
+	ShowSelectStatus();
+	m_Doc->ProjectModified( TRUE );
+	Invalidate( FALSE );
+}
+
+void CFreePcbView::refRotate(RotateDirection direction)
+{
+   int angle = 90;
+   if (direction == ROTATE_CCW) angle = 270;
+
 	SaveUndoInfoForPart( m_sel_part, CPartList::UNDO_PART_MODIFY, NULL, TRUE, m_Doc->m_undo_list ); 
 	m_dlist->CancelHighLight();
 	m_Doc->m_plist->UndrawPart( m_sel_part );
-	m_sel_part->m_ref_angle = (m_sel_part->m_ref_angle + 270)%360;
+	m_sel_part->m_ref_angle = (m_sel_part->m_ref_angle + angle)%360;
 	m_Doc->m_plist->DrawPart( m_sel_part );
 	m_Doc->m_plist->SelectRefText( m_sel_part );
 	m_Doc->ProjectModified( TRUE );
 	Invalidate( FALSE );
 }
 
-void CFreePcbView::OnValueRotateCW()
+void CFreePcbView::valueRotate(RotateDirection direction)
 {
-	SaveUndoInfoForPart( m_sel_part, CPartList::UNDO_PART_MODIFY, NULL, TRUE, m_Doc->m_undo_list ); 
-	m_dlist->CancelHighLight();
-	m_Doc->m_plist->UndrawPart( m_sel_part );
-	m_sel_part->m_value_angle = (m_sel_part->m_value_angle + 90)%360;
-	m_Doc->m_plist->DrawPart( m_sel_part );
-	m_Doc->m_plist->SelectValueText( m_sel_part );
-	m_Doc->ProjectModified( TRUE );
-	Invalidate( FALSE );
-}
+   int angle = 90;
+   if (direction == ROTATE_CCW) angle = 270;
 
-void CFreePcbView::OnValueRotateCCW()
-{
 	SaveUndoInfoForPart( m_sel_part, CPartList::UNDO_PART_MODIFY, NULL, TRUE, m_Doc->m_undo_list ); 
 	m_dlist->CancelHighLight();
 	m_Doc->m_plist->UndrawPart( m_sel_part );
-	m_sel_part->m_value_angle = (m_sel_part->m_value_angle + 270)%360;
+	m_sel_part->m_value_angle = (m_sel_part->m_value_angle + angle)%360;
 	m_Doc->m_plist->DrawPart( m_sel_part );
 	m_Doc->m_plist->SelectValueText( m_sel_part );
 	m_Doc->ProjectModified( TRUE );
