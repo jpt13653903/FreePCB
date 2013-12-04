@@ -2980,6 +2980,7 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 	{
 		// "n" pressed, select net
 		if( m_cursor_mode == CUR_VTX_SELECTED
+			|| m_cursor_mode == CUR_RAT_SELECTED
 			|| m_cursor_mode == CUR_SEG_SELECTED
 			|| m_cursor_mode == CUR_CONNECT_SELECTED 
 			|| m_cursor_mode == CUR_AREA_CORNER_SELECTED 
