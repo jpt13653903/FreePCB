@@ -551,6 +551,7 @@ public:
 	void valueRotate(RotateDirection direction);
 
    CPoint CurDragRatSnapToGrid(CPoint wp, int grid_spacing);
+   CPoint CurDragStubSnapToGrid(CPoint wp, int grid_spacing);
    CPoint snapRaw(CPoint wp, int grid_spacing);
 
    CPoint SegmentStartPosition();
