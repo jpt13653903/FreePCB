@@ -38,7 +38,7 @@ BOOL n_pressed = FALSE;
 BOOL gLastKeyWasArrow = FALSE;
 int gTotalArrowMoveX = 0;
 int gTotalArrowMoveY = 0;
-BOOL gShiftKeyDown = FALSE;
+static BOOL gShiftKeyDown = FALSE;
 
 BOOL gLastKeyWasGroupRotate = FALSE;
 long long groupAverageX=0, groupAverageY=0;
@@ -219,6 +219,7 @@ ON_COMMAND(ID_NET_CHANGELAYER, OnNetChangeLayer)
 ON_COMMAND(ID_NET_EDITNET, OnNetEditnet)
 ON_COMMAND(ID_TOOLS_MOVEORIGIN, OnToolsMoveOrigin)
 ON_WM_LBUTTONUP()
+ON_WM_MBUTTONUP()
 ON_COMMAND(ID_GROUP_MOVE, OnGroupMove)
 ON_COMMAND(ID_AREACORNER_ADDNEWAREA, OnAddSimilarArea)
 ON_COMMAND(ID_AREAEDGE_ADDNEWAREA, OnAddSimilarArea)
@@ -10277,7 +10278,7 @@ void CFreePcbView::panToPCBPosition(CPoint position)
 void CFreePcbView::centerCursor()
 {
    CPoint p = m_dlist->PCBToScreen( m_dlist->ViewportCenterPCB() );
-   SetCursorPos( p.x, p.y );
+   SetCursorPos( p.x, p.y - 4 );
 }
 
 void CFreePcbView::zoomIn()
