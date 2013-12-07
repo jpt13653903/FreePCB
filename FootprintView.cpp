@@ -27,8 +27,11 @@
 #include "DlgGlue.h"
 #include "DlgHole.h"
 #include "DlgSlot.h"
-#include ".\footprintview.h"
+#include "FootprintView.h"
 #include "afx.h"
+
+// globals
+static BOOL gShiftKeyDown = FALSE;
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -70,7 +73,10 @@ BEGIN_MESSAGE_MAP(CFootprintView, CView)
 	//{{AFX_MSG_MAP(CFootprintView)
 	ON_WM_SIZE()
 	ON_WM_LBUTTONDOWN()
+	ON_WM_MBUTTONDOWN()
+   ON_WM_MBUTTONUP()
 	ON_WM_KEYDOWN()
+   ON_WM_KEYUP()
 	ON_WM_MOUSEMOVE()
 	ON_WM_RBUTTONDOWN()
 	ON_WM_LBUTTONDBLCLK()
@@ -867,6 +873,27 @@ void CFootprintView::OnLButtonDown(UINT nFlags, CPoint point)
 	CView::OnLButtonDown(nFlags, point);
 }
 
+void CFootprintView::OnMButtonDown(UINT nFlags, CPoint point)
+{
+	// save starting position in pixels
+	m_bMButtonDown = TRUE;
+	startMousePan(point);
+
+	CView::OnMButtonDown(nFlags, point);
+}
+
+void CFootprintView::OnMButtonUp(UINT nFlags, CPoint point)
+{
+	if( !m_bMButtonDown ) {
+		// this avoids problems with opening a project with the button held down
+      CView::OnMButtonUp(nFlags, point);
+      return;
+   }
+
+   m_bMButtonDown = FALSE;
+   CView::OnMButtonUp(nFlags, point);
+}
+
 // left double-click
 //
 void CFootprintView::OnLButtonDblClk(UINT nFlags, CPoint point) 
@@ -1044,11 +1071,22 @@ void CFootprintView::OnSysKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags)
 //
 void CFootprintView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) 
 {
+	if( nChar == 16 )
+		gShiftKeyDown = TRUE;
+
 	HandleKeyPress( nChar, nRepCnt, nFlags );
 
 	// don't pass through SysKey F10
 	if( nChar != 121 )
 		CView::OnKeyDown(nChar, nRepCnt, nFlags);
+}
+	
+void CFootprintView::OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags)
+{
+	if( nChar == 16 )
+		gShiftKeyDown = FALSE;
+
+	CView::OnKeyUp(nChar, nRepCnt, nFlags);
 }
 
 // Key on keyboard pressed down
@@ -1060,6 +1098,10 @@ void CFootprintView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 	{
 		fk = m_fkey_option[nChar-112];
 	}
+	if( nChar >= 37 && nChar <= 40 ) // arrow key
+   {
+		fk = FK_FP_ARROW;
+   }
 	if( nChar == '1' || nChar == '2' || nChar == '3' )
 	{
 		// change visibility of layers
@@ -1099,6 +1141,21 @@ void CFootprintView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 			OnAddText();
 		else if( fk == FK_FP_ADD_POLYLINE )
 			OnAddPolyline();
+      else if ( fk == FK_FP_ARROW )
+      {
+         int delta = 100;
+         if (gShiftKeyDown) delta = 10;
+         CPoint deltaScreenPos(0,0);
+         if( nChar == 37 )
+            deltaScreenPos.x = -1*delta;
+         else if( nChar == 39 )
+            deltaScreenPos.x = delta;
+         else if( nChar == 38 )
+            deltaScreenPos.y = delta;
+         else if( nChar == 40 )
+            deltaScreenPos.y = -1*delta;
+         panDeltaScreen(deltaScreenPos);
+      }
 		break;
 
 	case CUR_FP_PAD_SELECTED:
@@ -1236,56 +1293,18 @@ void CFootprintView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 	if( nChar == ' ' )
 	{
 		// space bar pressed, center window on cursor then center cursor
-		m_org_x = p.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
-		m_org_y = p.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel)/2;
-		CRect screen_r;
-		GetWindowRect( &screen_r );
-		m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel, 
-			m_org_x, m_org_y );
-		Invalidate( FALSE );
-		p = PCBToScreen( p );
-		SetCursorPos( p.x, p.y - 4 );
+		panToPCBPosition(p);
+		centerCursor();
 	}
-	else if( nChar == 33 )
+	else if( nChar == VK_PRIOR )
 	{
-		// PgUp pressed, zoom in
-		if( m_pcbu_per_pixel > 254 )
-		{
-			m_pcbu_per_pixel = m_pcbu_per_pixel/ZOOM_RATIO;
-			m_org_x = p.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
-			m_org_y = p.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel)/2;
-			CRect screen_r;
-			GetWindowRect( &screen_r );
-			m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel, 
-				m_org_x, m_org_y );
-			Invalidate( FALSE );
-			p = PCBToScreen( p );
-			SetCursorPos( p.x, p.y - 4 );
-		}
+		// PgUp pressed
+		zoomIn();
 	}
-	else if( nChar == 34 )
+	else if( nChar == VK_NEXT )
 	{
-		// PgDn pressed, zoom out
-		// first, make sure that window boundaries will be OK
-		int org_x = p.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
-		int org_y = p.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
-		int max_x = org_x + (m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO;
-		int max_y = org_y + (m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel*ZOOM_RATIO;
-		if( org_x > -PCB_BOUND && org_x < PCB_BOUND && max_x > -PCB_BOUND && max_x < PCB_BOUND
-			&& org_y > -PCB_BOUND && org_y < PCB_BOUND && max_y > -PCB_BOUND && max_y < PCB_BOUND )
-		{
-			// OK, do it
-			m_org_x = org_x;
-			m_org_y = org_y;
-			m_pcbu_per_pixel = m_pcbu_per_pixel*ZOOM_RATIO;
-			CRect screen_r;
-			GetWindowRect( &screen_r );
-			m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel, 
-				m_org_x, m_org_y );
-			Invalidate( FALSE );
-			p = PCBToScreen( p );
-			SetCursorPos( p.x, p.y - 4 );
-		}
+		// PgDn pressed
+		zoomOut();
 	}
 	else if( nChar == 27 )
 	{
@@ -1300,6 +1319,11 @@ void CFootprintView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 //
 void CFootprintView::OnMouseMove(UINT nFlags, CPoint point) 
 {
+	if ( (nFlags & MK_MBUTTON) && m_bMButtonDown )
+   {
+      mousePan(point);
+   }
+
 	m_last_mouse_point = WindowToPCB( point );
 	SnapCursorPoint( m_last_mouse_point );
 }
@@ -1642,92 +1666,23 @@ int CFootprintView::ShowCursor()
 //
 BOOL CFootprintView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) 
 {
-#define MIN_WHEEL_DELAY 1.0
+	// ignore if cursor not in window
+	CRect wr;
+	GetWindowRect( wr );
+	if( pt.x < wr.left || pt.x > wr.right || pt.y < wr.top || pt.y > wr.bottom )
+		return CView::OnMouseWheel(nFlags, zDelta, pt);
 
-	static struct _timeb current_time;
-	static struct _timeb last_time;
-	static int first_time = 1;
-	double diff;
-
-	// get current time
-	_ftime( &current_time );
-	
-	if( first_time )
-	{
-		diff = 999.0;
-		first_time = 0;
-	}
-	else
-	{
-		// get elapsed time since last wheel event
-		diff = difftime( current_time.time, last_time.time );
-		double diff_mil = (double)(current_time.millitm - last_time.millitm)*0.001;
-		diff = diff + diff_mil;
-	}
-
-	if( diff > MIN_WHEEL_DELAY )
-	{
-		// first wheel movement in a while
-		// center window on cursor then center cursor
-		CPoint p;
-		GetCursorPos( &p );		// cursor pos in screen coords
-		p = ScreenToPCB( p );
-		m_org_x = p.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
-		m_org_y = p.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel)/2;
-		CRect screen_r;
-		GetWindowRect( &screen_r );
-		m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel, m_org_x, m_org_y );
-		Invalidate( FALSE );
-		p = PCBToScreen( p );
-		SetCursorPos( p.x, p.y - 4 );
-	}
-	else
-	{
-		// serial movements, zoom in or out
-		if( zDelta > 0 && m_pcbu_per_pixel > NM_PER_MIL/1000 )
-		{
-			// wheel pushed, zoom in then center world coords and cursor
-			CPoint p;
-			GetCursorPos( &p );		// cursor pos in screen coords
-			p = ScreenToPCB( p );	// convert to PCB coords
-			m_pcbu_per_pixel = m_pcbu_per_pixel/ZOOM_RATIO;
-			m_org_x = p.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2.0;
-			m_org_y = p.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel)/2.0;
-			CRect screen_r;
-			GetWindowRect( &screen_r );
-			m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel, m_org_x, m_org_y );
-			Invalidate( FALSE );
-			p = PCBToScreen( p );
-			SetCursorPos( p.x, p.y - 4 );
-		}
-		else if( zDelta < 0 )
-		{
-			// wheel pulled, zoom out then center
-			// first, make sure that window boundaries will be OK
-			CPoint p;
-			GetCursorPos( &p );		// cursor pos in screen coords
-			p = ScreenToPCB( p );
-			int org_x = p.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO)/2.0;
-			int org_y = p.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel*ZOOM_RATIO)/2.0;
-			int max_x = org_x + (m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO;
-			int max_y = org_y + (m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel*ZOOM_RATIO;
-			if( org_x > -PCB_BOUND && org_x < PCB_BOUND && max_x > -PCB_BOUND && max_x < PCB_BOUND
-				&& org_y > -PCB_BOUND && org_y < PCB_BOUND && max_y > -PCB_BOUND && max_y < PCB_BOUND )
-			{
-				// OK, do it
-				m_org_x = org_x;
-				m_org_y = org_y;
-				m_pcbu_per_pixel = m_pcbu_per_pixel*ZOOM_RATIO;
-				CRect screen_r;
-				GetWindowRect( &screen_r );
-				m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel, m_org_x, m_org_y );
-				Invalidate( FALSE );
-				p = PCBToScreen( p );
-				SetCursorPos( p.x, p.y - 4 );
-			}
-		}
-	}
-	last_time = current_time;
+   // serial movements, zoom in or out
+   if( zDelta > 0 )
+   {
+      // wheel pushed
+      zoomIn();
+   }
+   else if( zDelta < 0 )
+   {
+      // wheel pulled
+      zoomOut();
+   }
 
 	return CView::OnMouseWheel(nFlags, zDelta, pt);
 }
@@ -3012,6 +2967,89 @@ void CFootprintView::EnableRedo( BOOL bEnable )
 			submenu->EnableMenuItem( ID_EDIT_REDO, MF_BYCOMMAND | MF_DISABLED |MF_GRAYED );
 		pMain->DrawMenuBar();
 	}
+}
+
+void CFootprintView::centerCursor()
+{
+   CPoint p = PCBToScreen( m_dlist->ViewportCenterPCB() );
+   SetCursorPos( p.x, p.y - 4 );
+}
+
+void CFootprintView::panDeltaScreen(CPoint deltaScreenPos)
+{
+   CPoint newCenter = m_dlist->ViewportCenterPCB() + deltaScreenPos;
+   newCenter.x += deltaScreenPos.x * m_pcbu_per_pixel;
+   newCenter.y += deltaScreenPos.y * m_pcbu_per_pixel;
+
+   panToPCBPosition(newCenter);
+}
+
+void CFootprintView::panToPCBPosition(CPoint position)
+{
+   m_org_x = position.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
+   m_org_y = position.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel)/2;
+   CRect screen_r;
+   GetWindowRect( &screen_r );
+   m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel,
+         m_org_x, m_org_y );
+   Invalidate( FALSE );
+}
+
+void CFootprintView::zoomIn()
+{
+   if( m_pcbu_per_pixel <= 254 )
+      return;
+
+   CPoint center = m_dlist->ViewportCenterPCB();
+
+   m_pcbu_per_pixel = m_pcbu_per_pixel/ZOOM_RATIO;
+   m_org_x = center.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
+   m_org_y = center.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel)/2;
+   CRect screen_r;
+   GetWindowRect( &screen_r );
+   m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel,
+         m_org_x, m_org_y );
+   Invalidate( FALSE );
+}
+
+void CFootprintView::zoomOut()
+{
+   // first, make sure that window boundaries will be OK
+   CPoint center = m_dlist->ViewportCenterPCB();
+
+   int org_x = center.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
+   int org_y = center.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
+   int max_x = org_x + (m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO;
+   int max_y = org_y + (m_client_r.bottom)*m_pcbu_per_pixel*ZOOM_RATIO;
+   if( org_x > -PCB_BOUND && org_x < PCB_BOUND && max_x > -PCB_BOUND && max_x < PCB_BOUND
+         && org_y > -PCB_BOUND && org_y < PCB_BOUND && max_y > -PCB_BOUND && max_y < PCB_BOUND )
+   {
+      // OK, do it
+      m_org_x = org_x;
+      m_org_y = org_y;
+      m_pcbu_per_pixel = m_pcbu_per_pixel*ZOOM_RATIO;
+      CRect screen_r;
+      GetWindowRect( &screen_r );
+      m_dlist->SetMapping( &m_client_r, &screen_r, m_left_pane_w, m_bottom_pane_h, m_pcbu_per_pixel,
+            m_org_x, m_org_y );
+      Invalidate( FALSE );
+   }
+}
+
+void CFootprintView::startMousePan(CPoint point)
+{
+	m_panStartPoint = point;
+}
+
+void CFootprintView::mousePan(CPoint point)
+{
+   CPoint deltaScreenPos;
+   deltaScreenPos.x = m_panStartPoint.x - point.x;
+   deltaScreenPos.y = point.y - m_panStartPoint.y;
+
+   m_panStartPoint = point;
+
+   panDeltaScreen(deltaScreenPos);
 }
 
 void CFootprintView::OnCentroidEdit()

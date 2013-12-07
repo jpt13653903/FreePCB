@@ -98,6 +98,7 @@ enum {
 	FK_FP_EDIT_ADHESIVE,
 	FK_FP_MOVE_ADHESIVE,
 	FK_FP_DELETE_ADHESIVE,
+	FK_FP_ARROW,
 	FK_FP_NUM_OPTIONS
 };
 
@@ -223,6 +224,7 @@ public:
 	// mouse
 	CPoint m_last_mouse_point;	// last mouse position
 	CPoint m_last_cursor_point;	// last cursor position (may be different from mouse)
+	BOOL m_bMButtonDown;
 
 	// function key shortcuts
 	int m_fkey_option[12];
@@ -306,6 +308,16 @@ public:
 	void Redo();
 	void EnableUndo( BOOL bEnable );
 	void EnableRedo( BOOL bEnable );
+   
+   void centerCursor();
+   void panDeltaScreen(CPoint deltaScreenPos);
+   void panToPCBPosition(CPoint position);
+	void zoomIn();
+	void zoomOut();
+   
+   CPoint m_panStartPoint;
+	void startMousePan(CPoint point);
+	void mousePan(CPoint point);
 	
 protected:
 
@@ -314,7 +326,10 @@ protected:
 	//{{AFX_MSG(CFootprintView)
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnMButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnMButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
+	afx_msg void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
