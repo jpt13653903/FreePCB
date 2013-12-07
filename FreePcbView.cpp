@@ -7630,9 +7630,10 @@ void CFreePcbView::SnapCursorPoint( CPoint wp, UINT nFlags )
 		// snap to grid points if needed
 		if( m_snap_mode == SM_GRID_POINTS )
 		{
-		   if (m_cursor_mode == CUR_DRAG_RAT) {
+		   if (m_cursor_mode == CUR_DRAG_RAT)
 		      wp = CurDragRatSnapToGrid(wp, grid_spacing);
-         }
+         else if (m_cursor_mode == CUR_DRAG_STUB)
+		      wp = CurDragStubSnapToGrid(wp, grid_spacing);
          else 
             wp = snapRaw(wp, grid_spacing);
 		}
@@ -13093,6 +13094,24 @@ CPoint CFreePcbView::CurDragRatSnapToGrid(CPoint wp, int grid_spacing)
    
    if      (abs(wp.y - y1) < 2*abs(wp.y - snapped.y)) wp.y = y1;
    else if (abs(wp.y - y2) < 2*abs(wp.y - snapped.y)) wp.y = y2;
+   else
+      wp.y = snapped.y;
+
+   return wp;
+}
+
+CPoint CFreePcbView::CurDragStubSnapToGrid(CPoint wp, int grid_spacing)
+{
+   int x1 = SegmentStartPosition().x;
+   int y1 = SegmentStartPosition().y;
+
+   CPoint snapped = snapRaw(wp, grid_spacing);
+
+   if      (abs(wp.x - x1) < 2*abs(wp.x - snapped.x)) wp.x = x1;
+   else
+      wp.x = snapped.x;
+   
+   if      (abs(wp.y - y1) < 2*abs(wp.y - snapped.y)) wp.y = y1;
    else
       wp.y = snapped.y;
 
