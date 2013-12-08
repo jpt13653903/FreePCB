@@ -13037,7 +13037,7 @@ void CFreePcbView::partRotate(RotateDirection direction)
 		CPartList::UNDO_PART_MODIFY, NULL, TRUE, m_Doc->m_undo_list );
 	m_Doc->m_dlist->CancelHighLight();
 	m_Doc->m_plist->UndrawPart( m_sel_part );
-	m_sel_part->angle = (m_sel_part->angle + 90)%360;
+	m_sel_part->angle = (m_sel_part->angle + angle)%360;
 	m_Doc->m_plist->DrawPart( m_sel_part );
 	m_Doc->m_nlist->PartMoved( m_sel_part );
 	if( m_Doc->m_vis[LAY_RAT_LINE] )
