@@ -157,6 +157,7 @@ enum {
 	FK_SIDE_STYLE,
 	FK_EDIT_AREA,
 	FK_MOVE_SEGMENT,
+	FK_EDIT_CUTOUT,
 	FK_NUM_OPTIONS,
 	FK_ARROW
 };
@@ -235,6 +236,7 @@ const char fk_str[FK_NUM_OPTIONS*2+2][32] =
 	" Set Side",	" Style",
 	" Edit",	" Area",
 	" Move",	" Segment",
+	" Edit",	" Cutout",
 	" ****",	" ****"
 };
 
@@ -650,6 +652,8 @@ public:
 	afx_msg void OnClearDRC();
 	afx_msg void OnViewAll();
 	afx_msg void OnAddSoldermaskCutout();
+	afx_msg void OnEditSoldermaskCutout();
+	afx_msg void OnSoldermaskCutoutSideStyle();
 	afx_msg void OnSmCornerMove();
 	afx_msg void OnSmCornerSetPosition();
 	afx_msg void OnSmCornerDeleteCorner();
