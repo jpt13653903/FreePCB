@@ -1,5 +1,6 @@
 #pragma once
 #include "afxwin.h"
+#include "Polyline.h"
 
 
 // CDlgAddMaskCutout dialog
@@ -11,6 +12,7 @@ class CDlgAddMaskCutout : public CDialog
 public:
 	CDlgAddMaskCutout(CWnd* pParent = NULL);   // standard constructor
 	virtual ~CDlgAddMaskCutout();
+	void Initialize ( CPolyLine *poly );
 
 // Dialog Data
 	enum { IDD = IDD_ADD_MASK_CUTOUT };
@@ -26,4 +28,9 @@ public:
 	CButton m_radio_full;
 	int m_layer;
 	int m_hatch;
+	
+	BOOL isNewCutout;
+
+   CPolyLine *m_poly;
+
 };

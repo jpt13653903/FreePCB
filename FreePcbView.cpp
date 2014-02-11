@@ -3817,7 +3817,10 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 		break;
 
 	case CUR_SMCUTOUT_CORNER_SELECTED:
-		if( fk == FK_ARROW )
+		if( fk == FK_EDIT_CUTOUT ) {
+			OnEditSoldermaskCutout();
+      }
+      else if( fk == FK_ARROW )
 		{
 			if( !gLastKeyWasArrow )
 			{
@@ -3850,43 +3853,14 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 		break;
 
 	case CUR_SMCUTOUT_SIDE_SELECTED:
-		{
-			CPolyLine * poly = &m_Doc->m_sm_cutout[m_sel_id.i];
-			if( fk == FK_POLY_STRAIGHT )
-			{
-				m_dlist->CancelHighLight();
-				m_polyline_style = CPolyLine::STRAIGHT;
-				poly->SetSideStyle( m_sel_id.ii, m_polyline_style );
-				SetFKText( m_cursor_mode );
-				poly->HighlightSide( m_sel_id.ii );
-				Invalidate( FALSE );
-				m_Doc->ProjectModified( TRUE );
-			}
-			else if( fk == FK_POLY_ARC_CW )
-			{
-				m_dlist->CancelHighLight();
-				m_polyline_style = CPolyLine::ARC_CW;
-				poly->SetSideStyle( m_sel_id.ii, m_polyline_style );
-				SetFKText( m_cursor_mode );
-				poly->HighlightSide( m_sel_id.ii );
-				Invalidate( FALSE );
-				m_Doc->ProjectModified( TRUE );
-			}
-			else if( fk == FK_POLY_ARC_CCW )
-			{
-				m_dlist->CancelHighLight();
-				m_polyline_style = CPolyLine::ARC_CCW;
-				poly->SetSideStyle( m_sel_id.ii, m_polyline_style );
-				SetFKText( m_cursor_mode );
-				poly->HighlightSide( m_sel_id.ii );
-				Invalidate( FALSE );
-				m_Doc->ProjectModified( TRUE );
-			}
-			else if( fk == FK_ADD_CORNER )
-				OnSmSideInsertCorner();
-			else if( fk == FK_DELETE_CUTOUT || nChar == 46 )
-				OnSmSideDeleteCutout();
-		}
+      if( fk == FK_EDIT_CUTOUT )
+         OnEditSoldermaskCutout();
+      else if ( fk == FK_SIDE_STYLE )
+         OnSoldermaskCutoutSideStyle();
+      else if( fk == FK_ADD_CORNER )
+         OnSmSideInsertCorner();
+      else if( fk == FK_DELETE_CUTOUT || nChar == 46 )
+         OnSmSideDeleteCutout();
 		break;
 
 	case CUR_AREA_CORNER_SELECTED:
@@ -4364,15 +4338,18 @@ void CFreePcbView::SetFKText( int mode )
 
 	case CUR_SMCUTOUT_CORNER_SELECTED:
 		m_fkey_option[0] = FK_SET_POSITION;
+		m_fkey_option[1] = FK_EDIT_CUTOUT;
 		m_fkey_option[3] = FK_MOVE_CORNER;
 		m_fkey_option[4] = FK_DELETE_CORNER;
 		m_fkey_option[7] = FK_DELETE_CUTOUT;
 		break;
 
 	case CUR_SMCUTOUT_SIDE_SELECTED:
-		m_fkey_option[0] = FK_POLY_STRAIGHT;
-		m_fkey_option[1] = FK_POLY_ARC_CW;
-		m_fkey_option[2] = FK_POLY_ARC_CCW;
+		m_fkey_option[0] = FK_SIDE_STYLE;
+		m_fkey_option[1] = FK_EDIT_CUTOUT;
+		//m_fkey_option[0] = FK_POLY_STRAIGHT;
+		//m_fkey_option[1] = FK_POLY_ARC_CW;
+		//m_fkey_option[2] = FK_POLY_ARC_CCW;
 		{
 			int style = m_Doc->m_sm_cutout[m_sel_id.i].GetSideStyle( m_sel_id.ii );
 			if( style == CPolyLine::STRAIGHT )
@@ -8556,9 +8533,49 @@ void CFreePcbView::OnViewAll()
 	OnViewAllElements();
 }
 
+void CFreePcbView::OnEditSoldermaskCutout()
+{
+	CDlgAddMaskCutout dlg;
+   CPolyLine * poly = &m_Doc->m_sm_cutout[m_sel_id.i];
+   dlg.Initialize( poly );
+
+	int ret = dlg.DoModal();
+	if( ret == IDOK )
+	{
+	   // change data
+	   poly->SetLayer(dlg.m_layer);
+	   poly->SetHatch(dlg.m_hatch);
+		
+		CancelSelection();
+		m_dlist->CancelHighLight();
+		
+		m_Doc->ProjectModified( TRUE );
+		Invalidate( FALSE );
+	}
+}
+
+void CFreePcbView::OnSoldermaskCutoutSideStyle()
+{
+	CDlgSideStyle dlg;
+   CPolyLine * poly = &m_Doc->m_sm_cutout[m_sel_id.i];
+   int style = poly->GetSideStyle( m_sel_id.ii );
+
+	dlg.Initialize( style );
+	int ret = dlg.DoModal();
+	if( ret == IDOK )
+	{
+	   // TODO save undo info for cutout side style
+		m_dlist->CancelHighLight();
+		poly->SetSideStyle( m_sel_id.ii, dlg.m_style );
+	}
+	m_Doc->ProjectModified( TRUE );
+	Invalidate( FALSE );
+}
+
 void CFreePcbView::OnAddSoldermaskCutout()
 {
 	CDlgAddMaskCutout dlg;
+   dlg.Initialize( NULL );
 	int ret = dlg.DoModal();
 	if( ret == IDOK )
 	{
