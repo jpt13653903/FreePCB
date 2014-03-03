@@ -197,7 +197,7 @@ BEGIN
     BEGIN
         MENUITEM "Show board outline",          ID_VIEW_ENTIREBOARD
         MENUITEM "Show all ",                   ID_VIEW_ALLELEMENTS
-        MENUITEM "Show part...",                ID_VIEW_FINDPART
+        MENUITEM "Show part...\tCtrl+F",        ID_VIEW_FINDPART
         MENUITEM SEPARATOR
         MENUITEM "Layers...",                   ID_VIEW_LAYERS
         MENUITEM SEPARATOR
@@ -629,7 +629,7 @@ BEGIN
     BEGIN
         MENUITEM "Show board outline",          ID_VIEW_ENTIREBOARD
         MENUITEM "Show all ",                   ID_VIEW_ALLELEMENTS
-        MENUITEM "Show part...",                ID_VIEW_FINDPART
+        MENUITEM "Show part...\tCtrl+F",        ID_VIEW_FINDPART
         MENUITEM SEPARATOR
         MENUITEM "Layers...",                   ID_VIEW_LAYERS
         MENUITEM SEPARATOR
@@ -753,6 +753,7 @@ BEGIN
     "S",            ID_FILE_SAVE,           VIRTKEY, CONTROL, NOINVERT
     "N",            ID_FOOTPRINT_FILE_NEW,  VIRTKEY, CONTROL, NOINVERT
     "D",            ID_TOOLS_REPEATDRC,     VIRTKEY, CONTROL, NOINVERT
+    "F",            ID_VIEW_FINDPART,       VIRTKEY, CONTROL, NOINVERT
 END
 
 
@@ -767,8 +768,8 @@ CAPTION "About FreePcb"
 FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,11,12,20,20
-    LTEXT           "FreePcb Version 1.360 experimental",IDC_STATIC,42,12,119,8,SS_NOPREFIX
-    LTEXT           "(c) Allan Wright 2003 - 2010",IDC_STATIC,42,24,142,8
+    LTEXT           "FreePcb Version 1.360-r355 experimental",IDC_STATIC,42,12,119,8,SS_NOPREFIX
+    LTEXT           "(c) Allan Wright 2003 - 2014",IDC_STATIC,42,24,142,8
     DEFPUSHBUTTON   "OK",IDOK,178,7,50,14,WS_GROUP
     LTEXT           "Source libraries:",IDC_STATIC,19,66,51,8
     LTEXT           "(c) Advanced Interfaces Group, University of Manchester",IDC_STATIC,42,99,180,8
@@ -1711,7 +1712,7 @@ END
 
 IDD_SHOW_PART DIALOGEX 0, 0, 186, 77
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "1"
+CAPTION "Show part"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     COMBOBOX        IDC_COMBO1,90,18,84,234,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
