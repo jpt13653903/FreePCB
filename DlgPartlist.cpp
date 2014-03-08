@@ -11,7 +11,8 @@ partlist_info pl;
 
 // columns for list
 enum {
-	COL_VIS = 0,
+	COL_VALUE_VIS = 0,
+	COL_REF_VIS,
 	COL_NAME,
 	COL_PACKAGE,
 	COL_FOOTPRINT,
@@ -95,13 +96,7 @@ void CDlgPartlist::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_BUTTON_DELETE, m_button_delete);
 	if( pDX->m_bSaveAndValidate )
 	{
-		// leaving, get value_vis checkbox states
-		for (int iItem=0; iItem<m_list_ctrl.GetItemCount(); iItem++ )
-		{
-			int ip = m_list_ctrl.GetItemData( iItem );
-			BOOL iTest = ListView_GetCheckState( m_list_ctrl, iItem );
-			::pl[ip].value_vis = ListView_GetCheckState( m_list_ctrl, iItem );
-		}
+		// leaving
 		m_plist->ImportPartListInfo( &::pl, 0 );
 	}
 	DDX_Control(pDX, IDC_CHECK1, m_check_footprint);
@@ -117,6 +112,8 @@ BEGIN_MESSAGE_MAP(CDlgPartlist, CDialog)
 	ON_NOTIFY(LVN_COLUMNCLICK, IDC_LIST1, OnLvnColumnClickList1)
 	ON_BN_CLICKED(IDC_BUTTON_VAL_VIS, OnBnClickedValueVisible)
 	ON_BN_CLICKED(IDC_BUTTON_VAL_INVIS, OnBnClickedValueInvisible)
+	ON_BN_CLICKED(IDC_BUTTON_REF_VISIBLE, OnBnClickedRefVisible)
+	ON_BN_CLICKED(IDC_BUTTON_REF_INVISIBLE, OnBnClickedRefInvisible)
 	ON_NOTIFY(NM_CLICK, IDC_LIST1, OnNMClickList1)
 END_MESSAGE_MAP()
 
@@ -139,9 +136,10 @@ void CDlgPartlist::DrawListCtrl()
 	LVITEM lvitem;
 	CString str;
 	DWORD old_style = m_list_ctrl.GetExtendedStyle();
-	m_list_ctrl.SetExtendedStyle( LVS_EX_FULLROWSELECT | LVS_EX_FLATSB | LVS_EX_CHECKBOXES | old_style );
+	m_list_ctrl.SetExtendedStyle( LVS_EX_FULLROWSELECT | LVS_EX_FLATSB | old_style );
 	m_list_ctrl.DeleteAllItems();
-	m_list_ctrl.InsertColumn( COL_VIS, "Value Vis", LVCFMT_LEFT, 60 );
+	m_list_ctrl.InsertColumn( COL_VALUE_VIS, "Value Vis", LVCFMT_LEFT, 60 );
+	m_list_ctrl.InsertColumn( COL_REF_VIS, "Ref Vis", LVCFMT_LEFT, 60 );
 	m_list_ctrl.InsertColumn( COL_NAME, "Reference", LVCFMT_LEFT, 70 );
 	m_list_ctrl.InsertColumn( COL_PACKAGE, "Package", LVCFMT_LEFT, 150 );
 	m_list_ctrl.InsertColumn( COL_FOOTPRINT, "Footprint", LVCFMT_LEFT, 150 );
@@ -153,7 +151,8 @@ void CDlgPartlist::DrawListCtrl()
 		lvitem.lParam = i;
 		nItem = m_list_ctrl.InsertItem( i, "" );
 		m_list_ctrl.SetItemData( i, (LPARAM)i );
-		ListView_SetCheckState( m_list_ctrl, nItem, ::pl[i].value_vis );
+		m_list_ctrl.SetItem( i, COL_VALUE_VIS, LVIF_TEXT, ::pl[i].value_vis ? "Y" : "", 0, 0, 0, 0 );
+		m_list_ctrl.SetItem( i, COL_REF_VIS, LVIF_TEXT, ::pl[i].ref_vis ? "Y" : "", 0, 0, 0, 0 );
 		m_list_ctrl.SetItem( i, COL_NAME, LVIF_TEXT, ::pl[i].ref_des, 0, 0, 0, 0 );
 		m_list_ctrl.SetItem( i, COL_PACKAGE, LVIF_TEXT, ::pl[i].package, 0, 0, 0, 0 );
 		if( ::pl[i].shape )
@@ -184,12 +183,6 @@ void CDlgPartlist::Initialize( CPartList * plist,
 void CDlgPartlist::OnBnClickedButtonEdit()
 {
 	SaveSelections();
-	// save value_vis checkbox states
-	for (int Item=0; Item<m_list_ctrl.GetItemCount(); Item++ )
-	{
-		int ip = m_list_ctrl.GetItemData( Item );
-		::pl[ip].value_vis = ListView_GetCheckState( m_list_ctrl, Item );
-	}
 	// edit selected part(s)
 	int n_sel = m_list_ctrl.GetSelectedCount();
 	if( n_sel == 0 ) {
@@ -250,12 +243,6 @@ void CDlgPartlist::OnBnClickedButtonEdit()
 void CDlgPartlist::OnBnClickedButtonAdd()
 {
 	SaveSelections();
-	// save value_vis checkbox states
-	for (int Item=0; Item<m_list_ctrl.GetItemCount(); Item++ )
-	{
-		int ip = m_list_ctrl.GetItemData( Item );
-		::pl[ip].value_vis = ListView_GetCheckState( m_list_ctrl, Item );
-	}
 	// now add part
 	CDlgAddPart dlg;
 	dlg.Initialize( &::pl, -1, FALSE, TRUE, FALSE, 0,
@@ -352,6 +339,34 @@ void CDlgPartlist::OnBnClickedValueInvisible()
 		int iItem = m_list_ctrl.GetNextSelectedItem(pos);
 		int ip = m_list_ctrl.GetItemData( iItem );
 		::pl[ip].value_vis = FALSE;
+	}
+	DrawListCtrl();
+}
+
+
+void CDlgPartlist::OnBnClickedRefVisible()
+{
+	SaveSelections();
+	POSITION pos = m_list_ctrl.GetFirstSelectedItemPosition();
+	while( pos )
+	{
+		int iItem = m_list_ctrl.GetNextSelectedItem(pos);
+		int ip = m_list_ctrl.GetItemData( iItem );
+		::pl[ip].ref_vis = TRUE;
+	}
+	DrawListCtrl();
+	RestoreSelections();
+}
+
+void CDlgPartlist::OnBnClickedRefInvisible()
+{
+	SaveSelections();
+	POSITION pos = m_list_ctrl.GetFirstSelectedItemPosition(); 
+	while( pos )
+	{
+		int iItem = m_list_ctrl.GetNextSelectedItem(pos);
+		int ip = m_list_ctrl.GetItemData( iItem );
+		::pl[ip].ref_vis = FALSE;
 	}
 	DrawListCtrl();
 }

@@ -63,6 +63,7 @@ typedef struct {
 	CString package;	// package (from original imported netlist, don't edit)
 	CString value;		// value (from original imported netlist, don't edit)
 	BOOL value_vis;		// visibility of value
+	BOOL ref_vis;		// visibility of refdes
 	CShape * shape;		// pointer to shape (may be edited)
 	BOOL deleted;		// flag to indicate that part was deleted
 	BOOL bShapeChanged;	// flag to indicate that the shape has changed
@@ -275,4 +276,4 @@ public:
 	undo_part * CreatePartUndoRecord( cpart * part, CString * new_ref_des );
 	static void PartUndoCallback( int type, void * ptr, BOOL undo );
 };
- 
+

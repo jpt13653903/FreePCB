@@ -46,6 +46,8 @@ public:
 	afx_msg void OnLvnColumnClickList1(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnBnClickedValueVisible();
 	afx_msg void OnBnClickedValueInvisible();
+	afx_msg void OnBnClickedRefVisible();
+	afx_msg void OnBnClickedRefInvisible();
 	CButton m_check_footprint;
 	CButton m_check_package;
 	CButton m_check_value;
