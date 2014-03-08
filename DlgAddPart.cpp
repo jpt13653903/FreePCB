@@ -52,6 +52,7 @@ void CDlgAddPart::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDIT_ADD_PART_LIB, m_edit_lib);
 	DDX_Control(pDX, IDC_EDIT_VALUE, m_edit_value);
 	DDX_Control(pDX, IDC_CHECK1, m_check_value_visible);
+	DDX_Control(pDX, IDC_CHECK2, m_check_ref_visible);
 	DDX_Control(pDX, IDC_COMBO2, m_combo_angle);
 	if( pDX->m_bSaveAndValidate )
 	{
@@ -276,8 +277,10 @@ void CDlgAddPart::DoDataExchange(CDataExchange* pDX)
 			CString value_str;
 			m_edit_value.GetWindowText( value_str );
 			(*m_pl)[m_ip].value = value_str;
-			if( !m_multiple )
+			if( !m_multiple ) {
 				(*m_pl)[m_ip].value_vis = m_check_value_visible.GetCheck();
+				(*m_pl)[m_ip].ref_vis   = m_check_ref_visible.GetCheck();
+         }
 		}
 
 		// see if footprints for other parts need to be changed
@@ -500,10 +503,12 @@ BOOL CDlgAddPart::OnInitDialog()
 		m_edit_package.EnableWindow( m_multiple_mask & MSK_PACKAGE );
 		m_edit_value.EnableWindow( m_multiple_mask & MSK_VALUE );
 		m_check_value_visible.EnableWindow( FALSE );
+		m_check_ref_visible.EnableWindow( FALSE );
 		m_edit_package.SetWindowText( "" );
 		m_edit_footprint.SetWindowText( "" );
 		m_edit_value.SetWindowText( "" );
 		m_check_value_visible.SetCheck(0);
+		m_check_ref_visible.SetCheck(0);
 
 		if( m_units == MIL )
 			m_combo_units.SetCurSel(0);
@@ -528,6 +533,7 @@ BOOL CDlgAddPart::OnInitDialog()
 		m_edit_package.SetWindowText( pi->package );
 		m_edit_value.SetWindowText( pi->value );
 		m_check_value_visible.SetCheck( pi->value_vis );
+		m_check_ref_visible.SetCheck( pi->ref_vis );
 		if( pi->shape )
 			m_edit_footprint.SetWindowText( pi->shape->m_name );
 		if( m_units == MIL )

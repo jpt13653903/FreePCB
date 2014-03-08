@@ -51,6 +51,7 @@ private:
 	CEdit m_edit_footprint;
 	CEdit m_edit_value;
 	CButton m_check_value_visible;
+	CButton m_check_ref_visible;
 	CButton m_radio_drag;
 	CButton m_radio_offboard;
 	CButton m_radio_set;

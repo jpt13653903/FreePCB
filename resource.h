@@ -329,6 +329,8 @@
 #define IDC_BUTTON_VAL_INVIS            1043
 #define IDC_RADIO_SET_WIDTH             1044
 #define IDC_BUTTON_DELETE2              1045
+#define IDC_BUTTON_VAL_INVIS2           1045
+#define IDC_BUTTON_REF_INVISIBLE        1045
 #define IDC_RADIO_DEF                   1049
 #define IDC_RADIO_SET                   1050
 #define IDC_BUTTON_VISIBLE              1051
@@ -714,6 +716,7 @@
 #define IDC_BUTTON_LAYER_5              1435
 #define IDC_EDIT_MIN_PINS               1435
 #define IDC_BUTTON_LAYER_6              1436
+#define IDC_BUTTON_REF_VISIBLE          1436
 #define IDC_BUTTON_LAYER_7              1437
 #define IDC_BUTTON_LAYER_8              1438
 #define IDC_BUTTON_LAYER_9              1439
@@ -922,7 +925,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        351
 #define _APS_NEXT_COMMAND_VALUE         32944
-#define _APS_NEXT_CONTROL_VALUE         1436
+#define _APS_NEXT_CONTROL_VALUE         1437
 #define _APS_NEXT_SYMED_VALUE           106
 #endif
 #endif

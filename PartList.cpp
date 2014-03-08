@@ -2529,11 +2529,13 @@ int CPartList::ExportPartListInfo( partlist_info * pl, cpart * test_part )
 		{
 			(*pl)[i].ref_size = part->m_ref_size;
 			(*pl)[i].ref_width = part->m_ref_w;
+         (*pl)[i].ref_vis = part->m_ref_vis;
 		}
 		else
 		{
 			(*pl)[i].ref_size = 0;
 			(*pl)[i].ref_width = 0;
+			(*pl)[i].ref_vis = 0;
 		}
 		(*pl)[i].package = part->package;
 		(*pl)[i].value = part->value;
@@ -2685,6 +2687,7 @@ void CPartList::ImportPartListInfo( partlist_info * pl, int flags, CDlgLog * log
 						pi->part = old_part;
 						pi->ref_size = old_part->m_ref_size; 
 						pi->ref_width = old_part->m_ref_w;
+						pi->ref_vis = old_part->m_ref_vis;
 						pi->value = old_part->value;
 						pi->value_vis = old_part->m_value_vis;
 						pi->x = old_part->x; 
@@ -2698,6 +2701,7 @@ void CPartList::ImportPartListInfo( partlist_info * pl, int flags, CDlgLog * log
 						// use new footprint, but preserve position
 						pi->ref_size = old_part->m_ref_size; 
 						pi->ref_width = old_part->m_ref_w;
+						pi->ref_vis = old_part->m_ref_vis;
 						pi->value = old_part->value;
 						pi->value_vis = old_part->m_value_vis;
 						pi->x = old_part->x; 
@@ -2841,7 +2845,7 @@ void CPartList::ImportPartListInfo( partlist_info * pl, int flags, CDlgLog * log
 				pi->side, pi->angle, TRUE, FALSE );
 			if( part->shape )
 			{
-				ResizeRefText( part, pi->ref_size, pi->ref_width );
+				ResizeRefText( part, pi->ref_size, pi->ref_width, pi->ref_vis );
 				SetValue( part, &pi->value, 
 					part->shape->m_value_xi, 
 					part->shape->m_value_yi,
@@ -2878,6 +2882,11 @@ void CPartList::ImportPartListInfo( partlist_info * pl, int flags, CDlgLog * log
 				// value visibility changed
 				pi->part->m_value_vis = pi->value_vis;
 			}
+			if( pi->part->m_ref_vis != pi->ref_vis )
+			{
+				// ref visibility changed
+				pi->part->m_ref_vis = pi->ref_vis;
+			}
 			if( pi->part->shape != pi->shape || pi->bShapeChanged == TRUE )
 			{
 				// footprint was changed
@@ -2889,7 +2898,7 @@ void CPartList::ImportPartListInfo( partlist_info * pl, int flags, CDlgLog * log
 				{
 					// change footprint to new one
 					PartFootprintChanged( pi->part, pi->shape );
-					ResizeRefText( pi->part, pi->ref_size, pi->ref_width );
+					ResizeRefText( pi->part, pi->ref_size, pi->ref_width, pi->ref_vis );
 //** 420					m_nlist->PartFootprintChanged( part );
 //** 420					m_nlist->PartMoved( pi->part );
 				}
