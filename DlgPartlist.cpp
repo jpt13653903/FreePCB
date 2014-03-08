@@ -192,8 +192,10 @@ void CDlgPartlist::OnBnClickedButtonEdit()
 	}
 	// edit selected part(s)
 	int n_sel = m_list_ctrl.GetSelectedCount();
-	if( n_sel == 0 )
+	if( n_sel == 0 ) {
 		AfxMessageBox( "You have no part selected" );
+		return;
+   }
 	BOOL bMultiple = FALSE;
 	if( n_sel > 1 )
 		bMultiple = TRUE;
