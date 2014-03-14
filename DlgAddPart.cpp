@@ -414,6 +414,7 @@ BOOL CDlgAddPart::OnInitDialog()
 	if( m_new_part )
 	{
 		m_edit_ref_des.SetWindowText( "" );
+		m_check_ref_visible.SetCheck(1);
 		m_edit_footprint.SetWindowText( "" );
 		if( last_ref_des != "" )
 		{

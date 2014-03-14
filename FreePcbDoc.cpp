@@ -3093,11 +3093,13 @@ int CFreePcbDoc::ImportNetlist( CStdioFile * file, UINT flags,
 					{
 						(*pl)[ipart].ref_size = s->m_ref_size;
 						(*pl)[ipart].ref_width = s->m_ref_w;
+						(*pl)[ipart].ref_vis = TRUE;
 					}
 					else
 					{
 						(*pl)[ipart].ref_size = 0;
 						(*pl)[ipart].ref_width = 0;
+						(*pl)[ipart].ref_vis = FALSE;
 					}
 					(*pl)[ipart].package = shape_str;
 					(*pl)[ipart].shape = s;
@@ -3371,7 +3373,11 @@ int CFreePcbDoc::ImportPADSPCBNetlist( CStdioFile * file, UINT flags,
 					CString value_str;
 					SplitString( &shape_str, &value_str, &shape_str, '@' );
 					(*pl)[ipart].value = value_str;
+					(*pl)[ipart].value_vis = TRUE;
 				}
+            else {
+					(*pl)[ipart].value_vis = FALSE;
+            }
 				if( shape_str.GetLength() > CShape::MAX_NAME_SIZE )
 				{
 					CString mess;
@@ -3396,11 +3402,13 @@ int CFreePcbDoc::ImportPADSPCBNetlist( CStdioFile * file, UINT flags,
 				{
 					(*pl)[ipart].ref_size = s->m_ref_size;
 					(*pl)[ipart].ref_width = s->m_ref_w;
+					(*pl)[ipart].ref_vis = TRUE;
 				}
 				else
 				{
 					(*pl)[ipart].ref_size = 0;
 					(*pl)[ipart].ref_width = 0;
+					(*pl)[ipart].ref_vis = FALSE;
 				}
 				(*pl)[ipart].package = shape_str;
 				(*pl)[ipart].bOffBoard = TRUE;
