@@ -5937,7 +5937,7 @@ void CFreePcbView::OnContextMenu(CWnd* pWnd, CPoint point )
 void CFreePcbView::OnAddArea()
 {
 	CDlgAddArea dlg;
-	dlg.Initialize( m_Doc->m_nlist, m_Doc->m_num_layers, NULL, m_active_layer, -1 );
+	dlg.Initialize( m_Doc->m_nlist, m_Doc->m_num_layers, m_sel_net, m_active_layer, -1 );
 	int ret = dlg.DoModal();
 	if( ret == IDOK )
 	{
