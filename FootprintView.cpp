@@ -329,11 +329,21 @@ void CFootprintView::OnDraw(CDC* pDC)
 		else
 		{
 			// if layer is invisible, draw box with X
+         CPen pen( PS_SOLID, 1, RGB(0, 0, 0) );
+         CBrush brush( RGB(255, 255, 255) );
+
+			CBrush * old_brush = pDC->SelectObject( &brush );
+         CPen * old_pen = pDC->SelectObject( &pen );
+
 			pDC->Rectangle( &r );
 			pDC->MoveTo( r.left, r.top );
 			pDC->LineTo( r.right, r.bottom );
-			pDC->MoveTo( r.left, r.bottom );
-			pDC->LineTo( r.right, r.top );
+			// no idea why we need to move over by one for the second line
+			pDC->MoveTo( r.right-1, r.top );
+			pDC->LineTo( r.left-1, r.bottom );
+			
+			pDC->SelectObject( old_brush );
+         pDC->SelectObject( old_pen );
 		}
 		r.left += 20;
 		r.right += 120;
