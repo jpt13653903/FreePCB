@@ -3002,6 +3002,66 @@ void CFreePcbView::HandleKeyPress(UINT nChar, UINT nRepCnt, UINT nFlags)
 		Invalidate( FALSE );
 	}
 
+	if( nChar == 'H' )
+   {
+      // "h" pressed, hide net
+		if( m_cursor_mode == CUR_VTX_SELECTED
+			|| m_cursor_mode == CUR_END_VTX_SELECTED
+			|| m_cursor_mode == CUR_RAT_SELECTED
+			|| m_cursor_mode == CUR_SEG_SELECTED
+			|| m_cursor_mode == CUR_CONNECT_SELECTED 
+			|| m_cursor_mode == CUR_AREA_CORNER_SELECTED 
+			|| m_cursor_mode == CUR_AREA_SIDE_SELECTED )
+		{
+         m_Doc->m_nlist->SetNetVisibility( m_sel_net, FALSE );
+         m_Doc->ProjectModified( TRUE );
+         CancelSelection();
+			Invalidate( FALSE );
+		}
+		else if( m_cursor_mode == CUR_PAD_SELECTED )
+		{
+			// pad selected and if "n" held down, select net
+			cnet * net = m_Doc->m_plist->GetPinNet( m_sel_part, m_sel_id.i );
+			if( net )
+			{
+				m_sel_net = net;
+            m_Doc->m_nlist->SetNetVisibility( m_sel_net, FALSE );
+            m_Doc->ProjectModified( TRUE );
+            CancelSelection();
+            Invalidate( FALSE );
+			}
+		}
+   }
+	
+	if( nChar == 'S' )
+   {
+      // "s" pressed, hide net
+		if( m_cursor_mode == CUR_VTX_SELECTED
+			|| m_cursor_mode == CUR_END_VTX_SELECTED
+			|| m_cursor_mode == CUR_RAT_SELECTED
+			|| m_cursor_mode == CUR_SEG_SELECTED
+			|| m_cursor_mode == CUR_CONNECT_SELECTED 
+			|| m_cursor_mode == CUR_AREA_CORNER_SELECTED 
+			|| m_cursor_mode == CUR_AREA_SIDE_SELECTED )
+		{
+         m_Doc->m_nlist->SetNetVisibility( m_sel_net, TRUE );
+         m_Doc->ProjectModified( TRUE );
+			Invalidate( FALSE );
+		}
+		else if( m_cursor_mode == CUR_PAD_SELECTED )
+		{
+			// pad selected and if "n" held down, select net
+			cnet * net = m_Doc->m_plist->GetPinNet( m_sel_part, m_sel_id.i );
+			if( net )
+			{
+				m_sel_net = net;
+            m_Doc->m_nlist->SetNetVisibility( m_sel_net, TRUE );
+            m_Doc->ProjectModified( TRUE );
+            Invalidate( FALSE );
+			}
+		}
+   }
+	
 	if( nChar == 'N' )
 	{
 		// "n" pressed, select net
