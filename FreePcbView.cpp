@@ -320,6 +320,10 @@ void CFreePcbView::InitInstance()
 	m_mask_id[SEL_MASK_SM].Set( ID_SM_CUTOUT );
 	m_mask_id[SEL_MASK_BOARD].Set( ID_BOARD );
 	m_mask_id[SEL_MASK_DRC].Set( ID_DRC );
+
+	m_sel_part = NULL;
+	m_sel_net  = NULL;
+	m_sel_text = NULL;
 }
 
 // initialize view with defaults for a new project
