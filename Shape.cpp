@@ -2712,6 +2712,8 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 
 	for( int i=0; i<npads; i++ )
 	{
+	   bool isVisible = false;
+
 		int sel_x = 0;	// width of selection rect
 		int sel_y = 0;	// height of selection rect
 		padstack * ps = &m_padstack[i];
@@ -2769,6 +2771,9 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 				p = &ps->bottom_paste;
 				pad_el = &m_pad_bottom_paste_el[i];
 			}
+				
+         if (p->shape != PAD_NONE && p->shape != PAD_DEFAULT) 
+            isVisible |= dlist->GetLayerVisible(pad_lay) ? true : false;
 
 			// draw pad
 			int gtype;
@@ -2877,6 +2882,7 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 		}
 		if( ps->hole_size )
 		{
+         isVisible |= dlist->GetLayerVisible(LAY_FP_PAD_THRU) ? true : false;
 			// add to display list
 			p_id.st = ID_PAD;
 			m_hole_el[i] = dlist->Add( p_id, NULL, LAY_FP_PAD_THRU, 
@@ -2900,16 +2906,18 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 				pin.x, pin.y );
 		}
 
-      TextInfo padTextInfo;
-      padTextInfo.text = ps->name;
-      padTextInfo.xi = pin.x;
-      padTextInfo.yi = pin.y;
-      padTextInfo.layer = LAY_FP_VISIBLE_GRID;
-      padTextInfo.thickness = 1*NM_PER_MIL;
-      padTextInfo.angle = 0;
-      padTextInfo.size = 10*NM_PER_MIL;
+      if (isVisible) {
+         TextInfo padTextInfo;
+         padTextInfo.text = ps->name;
+         padTextInfo.xi = pin.x;
+         padTextInfo.yi = pin.y;
+         padTextInfo.layer = LAY_FP_VISIBLE_GRID;
+         padTextInfo.thickness = 1*NM_PER_MIL;
+         padTextInfo.angle = 0;
+         padTextInfo.size = 10*NM_PER_MIL;
 
-      DrawText(padTextInfo, m_pad_text_el, dlist, fontutil, this, false);
+         DrawText(padTextInfo, m_pad_text_el, dlist, fontutil, this, false);
+      }
 	}
 
 	// draw ref designator text

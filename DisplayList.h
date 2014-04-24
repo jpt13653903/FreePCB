@@ -206,6 +206,7 @@ public:
 	void SetDCToWorldCoords( CDC * pDC, CDC * mDC, int pcbu_org_x, int pcbu_org_y );
 	void SetLayerRGB( int layer, int r, int g, int b );
 	void SetLayerVisible( int layer, BOOL vis );
+	BOOL GetLayerVisible( int layer );
 	void SetLayerDrawOrder( int layer, int order )
 			{ m_layer_in_order[order] = layer; m_order_for_layer[layer] = order; };
 	dl_element * Add( id id, void * ptr, int glayer, int gtype, int visible,
