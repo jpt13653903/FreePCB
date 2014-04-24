@@ -530,6 +530,8 @@ void CFootprintView::OnLButtonDown(UINT nFlags, CPoint point)
 				// clicked in color square
 				m_Doc->m_fp_vis[i] = !m_Doc->m_fp_vis[i];
 				m_dlist->SetLayerVisible( i, m_Doc->m_fp_vis[i] );
+            m_fp.Undraw();
+            m_fp.Draw( m_dlist, m_Doc->m_smfontutil );
 				Invalidate( FALSE );
 			}
 			else

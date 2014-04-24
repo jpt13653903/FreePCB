@@ -1149,6 +1149,11 @@ void CDisplayList::SetLayerVisible( int layer, BOOL vis )
 	m_vis[layer] = vis;
 }
 
+BOOL CDisplayList::GetLayerVisible( int layer )
+{
+   return m_vis[layer];
+}
+
 // test x,y for a hit on an item in the selection layer
 // creates arrays with layer and id of each hit item
 // assigns priority based on layer and id
