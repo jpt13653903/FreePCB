@@ -196,6 +196,7 @@ public:
 public:
 	CDisplayList * m_dlist;
 	CArray<dl_element*> m_hole_el;		// hole display element 
+	CArray<dl_element*> m_pad_text_el;
 	CArray<dl_element*> m_pad_top_el;		// top pad display element 
 	CArray<dl_element*> m_pad_inner_el;		// inner pad display element 
 	CArray<dl_element*> m_pad_bottom_el;	// bottom pad display element 

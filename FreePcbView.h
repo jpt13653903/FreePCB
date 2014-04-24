@@ -495,6 +495,7 @@ public:
 	void CancelDraggingGroup();
 	void MoveGroup( int dx, int dy );
 	void RotateGroup();
+	void ChangeGroupSide();
 	void DeleteGroup(  CArray<void*> * grp_ptr, CArray<id> * grp_id );
 	void FindGroupCenter();
 	void HighlightGroup();
