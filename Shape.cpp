@@ -8,6 +8,88 @@
 
 #define NO_MM	// this restores backward compatibility for project files
 
+struct TextInfo {
+   CString text;
+
+   int xi;
+   int yi;
+   int thickness;
+
+   int layer;
+
+   int angle;
+   double size;
+};
+
+int DrawText(const TextInfo &ti, CArray<dl_element *> &text_el, CDisplayList * dlist, SMFontUtil * fontutil, void *ptr, bool clear=true )
+{
+   id p_id;
+
+   if (clear) text_el.SetSize(0);
+	p_id.st = ID_STROKE;
+	double x_scale = (double)ti.size/22.0;
+	double y_scale = (double)ti.size/22.0;
+	double y_offset = 9.0*y_scale;
+
+	int i_el = text_el.GetSize();
+	double xc = 0.0;
+	CPoint si, sf, tb_org;
+
+	for( size_t ic=0; ic<ti.text.GetLength(); ic++ )
+	{
+		// get stroke info for character
+		int xi, yi, xf, yf;
+		double coord[64][4];
+		double min_x, min_y, max_x, max_y;
+		int nstrokes = fontutil->GetCharStrokes( ti.text[ic], SIMPLEX, 
+			&min_x, &min_y, &max_x, &max_y, coord, 64 );
+		for( int is=0; is<nstrokes; is++ )
+		{
+			xi = (coord[is][0] - min_x)*x_scale + xc;
+			yi = coord[is][1]*y_scale + y_offset;
+			xf = (coord[is][2] - min_x)*x_scale + xc;
+			yf = coord[is][3]*y_scale + y_offset;
+			// get stroke relative to text box
+			if( yi > yf )
+			{
+				si.x = xi;
+				sf.x = xf;
+				si.y = yi;
+				sf.y = yf;
+			}
+			else
+			{
+				si.x = xf;
+				sf.x = xi;
+				si.y = yf;
+				sf.y = yi;
+			}
+			// rotate with text box
+			tb_org.x = ti.xi;
+			tb_org.y = ti.yi;
+			RotatePoint( &si, ti.angle, zero );
+			RotatePoint( &sf, ti.angle, zero );
+			// move to origin of text box
+			si.x += tb_org.x;
+			sf.x += tb_org.x;
+			si.y += tb_org.y;
+			sf.y += tb_org.y;
+			// draw
+			p_id.i = i_el;
+			text_el.SetSize(i_el+1);
+			text_el[i_el] = dlist->Add( p_id, ptr, 
+				ti.layer, DL_LINE, 1, ti.thickness, 0, 
+				si.x, si.y, sf.x, sf.y, 0, 0 );
+			i_el++;
+		}
+		xc += (max_x - min_x + 8.0)*x_scale;
+	}
+
+	int width = xc - 3.0*x_scale;
+	return width;
+}
+
+
 // utility function make strings for dimensions
 //
 CString ws( int n, int units )
@@ -2625,6 +2707,9 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 	m_pad_bottom_mask_el.SetSize( npads );
 	m_pad_bottom_paste_el.SetSize( npads );
 	m_pad_sel.SetSize( npads );
+	
+	m_pad_text_el.SetSize(0);
+
 	for( int i=0; i<npads; i++ )
 	{
 		int sel_x = 0;	// width of selection rect
@@ -2814,73 +2899,34 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 				pin.y+sel_y/2, 
 				pin.x, pin.y );
 		}
+
+      TextInfo padTextInfo;
+      padTextInfo.text = ps->name;
+      padTextInfo.xi = pin.x;
+      padTextInfo.yi = pin.y;
+      padTextInfo.layer = LAY_FP_VISIBLE_GRID;
+      padTextInfo.thickness = 1*NM_PER_MIL;
+      padTextInfo.angle = 0;
+      padTextInfo.size = 10*NM_PER_MIL;
+
+      DrawText(padTextInfo, m_pad_text_el, dlist, fontutil, this, false);
 	}
 
 	// draw ref designator text
-	int silk_lay = LAY_FP_SILK_TOP;
-	int nstrokes = 0;
-	m_ref_el.SetSize(0);
-	p_id.st = ID_STROKE;
-	double x_scale = (double)m_ref_size/22.0;
-	double y_scale = (double)m_ref_size/22.0;
-	double y_offset = 9.0*y_scale;
-	int i_el = 0;
-	double xc = 0.0;
-	CPoint si, sf, tb_org;
-	char ref_str[] = "REF";
-	for( int ic=0; ic<3; ic++ )
-	{
-		// get stroke info for character
-		int xi, yi, xf, yf;
-		double coord[64][4];
-		double min_x, min_y, max_x, max_y;
-		int nstrokes = fontutil->GetCharStrokes( ref_str[ic], SIMPLEX, 
-			&min_x, &min_y, &max_x, &max_y, coord, 64 );
-		for( int is=0; is<nstrokes; is++ )
-		{
-			xi = (coord[is][0] - min_x)*x_scale + xc;
-			yi = coord[is][1]*y_scale + y_offset;
-			xf = (coord[is][2] - min_x)*x_scale + xc;
-			yf = coord[is][3]*y_scale + y_offset;
-			// get stroke relative to text box
-			if( yi > yf )
-			{
-				si.x = xi;
-				sf.x = xf;
-				si.y = yi;
-				sf.y = yf;
-			}
-			else
-			{
-				si.x = xf;
-				sf.x = xi;
-				si.y = yf;
-				sf.y = yi;
-			}
-			// rotate with text box
-			tb_org.x = m_ref_xi;
-			tb_org.y = m_ref_yi;
-			RotatePoint( &si, m_ref_angle, zero );
-			RotatePoint( &sf, m_ref_angle, zero );
-			// move to origin of text box
-			si.x += tb_org.x;
-			sf.x += tb_org.x;
-			si.y += tb_org.y;
-			sf.y += tb_org.y;
-			// draw
-			p_id.i = i_el;
-			m_ref_el.SetSize(i_el+1);
-			m_ref_el[i_el] = dlist->Add( p_id, this, 
-				silk_lay, DL_LINE, 1, m_ref_w, 0, 
-				si.x, si.y, sf.x, sf.y, 0, 0 );
-			i_el++;
-		}
-		xc += (max_x - min_x + 8.0)*x_scale;
-	}
+	TextInfo refTextInfo;
+	refTextInfo.text = "REF";
+	refTextInfo.xi = m_ref_xi;
+	refTextInfo.yi = m_ref_yi;
+	refTextInfo.layer = LAY_FP_SILK_TOP;
+	refTextInfo.thickness = m_ref_w;
+	refTextInfo.angle = m_ref_angle;
+	refTextInfo.size = m_ref_size;
+   int width = DrawText(refTextInfo, m_ref_el, dlist, fontutil, this);
+
 	// draw selection rectangle for ref text
+	CPoint si, sf;
 	p_id.st = ID_SEL_REF_TXT;
 	p_id.i = 0;
-	int width = xc - 3.0*x_scale;
 	si.x = m_ref_xi;
 	sf.x = m_ref_xi + width;
 	si.y = m_ref_yi;
@@ -2888,74 +2934,26 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 	// rotate rectangle relative to part
 	RotatePoint( &sf, m_ref_angle, si );
 	// draw
-	m_ref_sel = dlist->AddSelector( p_id, NULL, silk_lay, DL_HOLLOW_RECT, 1,
+	m_ref_sel = dlist->AddSelector( p_id, NULL, refTextInfo.layer, DL_HOLLOW_RECT, 1,
 		0, 0, si.x, si.y, sf.x, sf.y, si.x, si.y );
 
 	// draw value text
-	nstrokes = 0;
-	m_value_el.SetSize(0);
+	TextInfo valueTextInfo;
+	valueTextInfo.text = "VALUE";
+	valueTextInfo.xi = m_value_xi;
+	valueTextInfo.yi = m_value_yi;
+	valueTextInfo.layer = LAY_FP_SILK_TOP;
+	valueTextInfo.thickness = m_value_w;
+	valueTextInfo.angle = m_value_angle;
+	valueTextInfo.size = m_value_size;
+
 	if( m_value_size )
 	{
-		p_id.st = ID_STROKE;
-		x_scale = (double)m_value_size/22.0;
-		y_scale = (double)m_value_size/22.0;
-		y_offset = 9.0*y_scale;
-		i_el = 0;
-		xc = 0.0;
-		char value_str[] = "VALUE";
-		for( int ic=0; ic<5; ic++ )
-		{
-			// get stroke info for character
-			int xi, yi, xf, yf;
-			double coord[64][4];
-			double min_x, min_y, max_x, max_y;
-			int nstrokes = fontutil->GetCharStrokes( value_str[ic], SIMPLEX, 
-				&min_x, &min_y, &max_x, &max_y, coord, 64 );
-			for( int is=0; is<nstrokes; is++ )
-			{
-				xi = (coord[is][0] - min_x)*x_scale + xc;
-				yi = coord[is][1]*y_scale + y_offset;
-				xf = (coord[is][2] - min_x)*x_scale + xc;
-				yf = coord[is][3]*y_scale + y_offset;
-				// get stroke relative to text box
-				if( yi > yf )
-				{
-					si.x = xi;
-					sf.x = xf;
-					si.y = yi;
-					sf.y = yf;
-				}
-				else
-				{
-					si.x = xf;
-					sf.x = xi;
-					si.y = yf;
-					sf.y = yi;
-				}
-				// rotate with text box
-				tb_org.x = m_value_xi;
-				tb_org.y = m_value_yi;
-				RotatePoint( &si, m_value_angle, zero );
-				RotatePoint( &sf, m_value_angle, zero );
-				// move to origin of text box
-				si.x += tb_org.x;
-				sf.x += tb_org.x;
-				si.y += tb_org.y;
-				sf.y += tb_org.y;
-				// draw
-				p_id.i = i_el;
-				m_value_el.SetSize(i_el+1);
-				m_value_el[i_el] = dlist->Add( p_id, this, 
-					silk_lay, DL_LINE, 1, m_value_w, 0, 
-					si.x, si.y, sf.x, sf.y, 0, 0 );
-				i_el++;
-			}
-			xc += (max_x - min_x + 8.0)*x_scale;
-		}
+      width = DrawText(valueTextInfo, m_value_el, dlist, fontutil, this);
+		
 		// draw selection rectangle for value text
 		p_id.st = ID_SEL_VALUE_TXT;
 		p_id.i = 0;
-		width = xc - 3.0*x_scale;
 		si.x = m_value_xi;
 		sf.x = m_value_xi + width;
 		si.y = m_value_yi;
@@ -2963,9 +2961,12 @@ void CEditShape::Draw( CDisplayList * dlist, SMFontUtil * fontutil )
 		// rotate rectangle relative to part
 		RotatePoint( &sf, m_value_angle, si );
 		// draw
-		m_value_sel = dlist->AddSelector( p_id, NULL, silk_lay, DL_HOLLOW_RECT, 1,
+		m_value_sel = dlist->AddSelector( p_id, NULL, valueTextInfo.layer, DL_HOLLOW_RECT, 1,
 			0, 0, si.x, si.y, sf.x, sf.y, si.x, si.y );
 	}
+   else {
+      m_value_el.SetSize(0);
+   }
 
 	// now draw outline polylines
 	p_id.st = ID_OUTLINE;
@@ -3071,6 +3072,10 @@ void CEditShape::Undraw()
 	m_pad_top_el.RemoveAll();
 	m_pad_inner_el.RemoveAll();
 	m_pad_bottom_el.RemoveAll();
+   
+   for (int i=0; i<m_pad_text_el.GetSize(); i++)
+      m_dlist->Remove( m_pad_text_el[i] );
+	m_pad_text_el.RemoveAll();
 
 	for( int i=0; i<m_ref_el.GetSize(); i++ )
 		m_dlist->Remove( m_ref_el[i] );
