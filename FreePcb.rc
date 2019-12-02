@@ -292,7 +292,7 @@ BEGIN
         MENUITEM "Move origin",                 ID_TOOLS_MOVEORIGIN_FP
         MENUITEM SEPARATOR
         MENUITEM "Footprint Wizard...",         ID_FP_TOOLS_FOOTPRINTWIZARD
-        MENUITEM "Make PDF from Library File...", ID_TOOLS_FOOTPRINTLIBRARYMANAGER
+        // MENUITEM "Make PDF from Library File...", ID_TOOLS_FOOTPRINTLIBRARYMANAGER
         MENUITEM SEPARATOR
         MENUITEM "Return to PCB layout",        ID_FP_TOOLS_RETURN
     END

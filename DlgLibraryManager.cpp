@@ -5,7 +5,7 @@
 #include <math.h>
 #include "FreePcb.h"
 #include "DlgLibraryManager.h"
-#include "cpdflib.h"
+//#include "cpdflib.h"
 #include "DlgLog.h"
 #include "PathDialog.h"
 
@@ -63,12 +63,12 @@ END_MESSAGE_MAP()
 
 void CDlgLibraryManager::OnBnClickedButtonMakePdf()
 {
-#if 0
+#if 1
 	//** temporarily disabled
 	AfxMessageBox( "Sorry, this function is currently disabled" );
 	return;
 #endif
-//#if 0
+#if 0
 	// set page size
 	double PageWidth;	
 	double PageHeight;	
@@ -969,7 +969,7 @@ void CDlgLibraryManager::OnBnClickedButtonMakePdf()
 		}
 		cpdf_close(pdf);			/* shut down */
 	}
-//#endif
+#endif
 }
 
 void CDlgLibraryManager::Initialize( CFootLibFolderMap * foldermap, CDlgLog * log )
