@@ -10389,6 +10389,13 @@ void CFreePcbView::zoomIn()
    if( m_pcbu_per_pixel <= 254 )
       return;
 
+   // get cursor position and convert to PCB coords
+   CPoint p;
+   GetCursorPos(&p);		// cursor pos in screen coords
+   p = m_dlist->ScreenToPCB(p);	// convert to PCB coords
+   panToPCBPosition(p);
+   centerCursor();
+
    CPoint center = m_dlist->ViewportCenterPCB();
 
    m_pcbu_per_pixel = m_pcbu_per_pixel/ZOOM_RATIO;
@@ -10403,6 +10410,13 @@ void CFreePcbView::zoomIn()
 
 void CFreePcbView::zoomOut()
 {
+   // get cursor position and convert to PCB coords
+   CPoint p;
+   GetCursorPos(&p);		// cursor pos in screen coords
+   p = m_dlist->ScreenToPCB(p);	// convert to PCB coords
+   panToPCBPosition(p);
+   centerCursor();
+  
    // first, make sure that window boundaries will be OK
    CPoint center = m_dlist->ViewportCenterPCB();
 

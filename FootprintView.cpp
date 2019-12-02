@@ -2998,7 +2998,7 @@ void CFootprintView::panDeltaScreen(CPoint deltaScreenPos)
 
 void CFootprintView::panToPCBPosition(CPoint position)
 {
-   m_org_x = position.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
+    m_org_x = position.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel)/2;
    m_org_y = position.y - ((m_client_r.bottom-m_bottom_pane_h)*m_pcbu_per_pixel)/2;
    CRect screen_r;
    GetWindowRect( &screen_r );
@@ -3011,6 +3011,13 @@ void CFootprintView::zoomIn()
 {
    if( m_pcbu_per_pixel <= 254 )
       return;
+
+   // get cursor position and convert to PCB coords
+   CPoint p;
+   GetCursorPos(&p);		// cursor pos in screen coords
+   p = ScreenToPCB(p);	// convert to PCB coords
+   panToPCBPosition(p);
+   centerCursor();
 
    CPoint center = m_dlist->ViewportCenterPCB();
 
@@ -3026,7 +3033,14 @@ void CFootprintView::zoomIn()
 
 void CFootprintView::zoomOut()
 {
-   // first, make sure that window boundaries will be OK
+  // get cursor position and convert to PCB coords
+  CPoint p;
+  GetCursorPos(&p);		// cursor pos in screen coords
+  p = ScreenToPCB(p);	// convert to PCB coords
+  panToPCBPosition(p);
+  centerCursor();
+  
+  // first, make sure that window boundaries will be OK
    CPoint center = m_dlist->ViewportCenterPCB();
 
    int org_x = center.x - ((m_client_r.right-m_left_pane_w)*m_pcbu_per_pixel*ZOOM_RATIO)/2;
