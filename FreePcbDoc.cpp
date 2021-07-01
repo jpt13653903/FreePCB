@@ -106,6 +106,8 @@ END_MESSAGE_MAP()
 
 CFreePcbDoc::CFreePcbDoc()
 {
+	m_num_layers = 0;
+	m_num_copper_layers = 0;
 	// get application directory
 	// (there must be a better way to do this!!!)
 	int token_start = 0;
